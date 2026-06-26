@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+      - dev
+      - test
+      - docker
     paths:
       - "api/**"
 
@@ -31,4 +34,6 @@ jobs:
           context: ./api
           file: ./api/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/api-wachi:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/api-wachi:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/api-wachi:${{ github.sha }}
