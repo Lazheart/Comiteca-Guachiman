@@ -20,9 +20,13 @@ La documentación completa del proyecto puede encontrarse en la carpeta `docs/`.
 ## Estructura del Proyecto
 
 ```text
-├── data-ingest
+├── .github/workflows/
+│   └── api.yml
+├── frontend/
+├── api/
+├── data-ingest/
 │   ├── load_data.sql
-│   └── scripts
+│   └── scripts/
 │       ├── generate_all.py
 │       ├── generate_empleados.py
 │       ├── generate_eventos.py
@@ -80,3 +84,34 @@ El archivo `load_data.sql` contiene las instrucciones necesarias para importar l
 El archivo `06_seed_data.sql` contiene un conjunto reducido de datos cuidadosamente seleccionados para demostrar consultas, vistas, triggers y casos de uso específicos durante la presentación del proyecto.
 
 Estos datos son independientes de los conjuntos masivos generados mediante los scripts de ingesta.
+
+## Despliegue
+
+Para asegurar replicabilidad se utilizara Docker, las imagenes usadas para este proyecto son:
+- postgresql:17-alpine
+- lazhearth/wachiman-api:latest
+
+Mientras que para levantar la base de datos PostgreSQL y la API se utilizara ***Docker Compose***.
+```bash
+docker-compose up -d
+```
+
+---
+## Visualización de datos
+
+El proyecto incluye una interfaz web desarrollada en React para la visualización de los datos almacenados en la base de datos PostgreSQL
+
+Donde se puede simular el préstamo de materiales, la gestión de eventos, el registro de visitantes, etc.
+
+Para acceder localmente basta con correr los siguientes comandos:
+```bash
+cd frontend
+pnpm install
+pnpm run dev
+```
+
+## Notas
+
+- El .env.example es un archivo de ejemplo para el archivo .env , se debe crear un archivo .env con las credenciales de la base de datos. 
+- Las imagenes de docker son sacadas de [Docker Hub](https://hub.docker.com/): [postgresql:17-alpine](https://hub.docker.com/_/postgres/tags?name=17-alpine) y [lazhearth/wachiman-api:latest](https://hub.docker.com/r/lazhearth/wachiman-api/tags?name=latest)
+- Para la demo de este proyecto se utilizo Amazon Web Services , sin embargo se puede ejecutar localmente con Docker Compose o en cualquier otra plataforma que soporte Docker.
