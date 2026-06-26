@@ -2,4 +2,6 @@ output/
 data/
 generated/
 .env
+venv/
+__pycache__
 
