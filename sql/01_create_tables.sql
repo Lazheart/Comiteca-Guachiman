@@ -3,7 +3,7 @@ CREATE TABLE Persona (
     nombre VARCHAR(20),
     apellido VARCHAR(20),
     telefono VARCHAR(9),
-    correo VARCHAR(40),
+    correo VARCHAR(40)
 );
 
 CREATE TABLE Miembro (DNI INTEGER);

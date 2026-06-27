@@ -9,6 +9,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d
+      - ./data-ingest:/data-ingest
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -16,8 +17,8 @@ services:
       retries: 5
 
   api-wachi:
-    container_name: api-wachi
-    image: lazhearth/wachiman-api:latest
+    container_name: wachiman-api
+    image: lazheart/api-wachi:latest
     env_file:
       - .env
     depends_on:
