@@ -85,6 +85,16 @@ El archivo `06_seed_data.sql` contiene un conjunto reducido de datos cuidadosame
 
 Estos datos son independientes de los conjuntos masivos generados mediante los scripts de ingesta.
 
+## Generación de datos masivos
+
+Puede utilizar el script `create_data.sh` para generar datos masivos y cargarlos en la base de datos.
+
+```bash
+./create_data.sh [size]
+```
+
+Donde `size` puede ser '1k', '10k', '100k' o '1m'. El valor por defecto es '10k'.
+
 ## Despliegue
 
 Para asegurar replicabilidad se utilizara Docker, las imagenes usadas para este proyecto son:
