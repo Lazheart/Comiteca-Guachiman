@@ -42,7 +42,9 @@ def generate_eventos_y_relaciones(fake, miembros, visitantes, ponentes, num_even
             'tema': fake.sentence(nb_words=5)[:100].replace('.', ''),
             'fecha': fecha,
             'horaInicio': hora_inicio,
-            'horaFin': hora_fin
+            'horaFin': hora_fin,
+            'numeroDePiso': random.randint(1, 4),
+            'idZona': random.choice(['A', 'B', 'C', 'D'])
         })
         
     asistencias = []

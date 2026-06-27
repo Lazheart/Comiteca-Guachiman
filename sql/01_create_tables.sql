@@ -21,7 +21,7 @@ CREATE TABLE Institucion (
     tipoInstitucion VARCHAR(50),
     direccion VARCHAR(200),
     telefono VARCHAR(9),
-    correo VARCHAR(50),,
+    correo VARCHAR(50),
     representante VARCHAR(20),
     estado VARCHAR(10)
 );
@@ -117,7 +117,9 @@ CREATE TABLE Evento (
     tema VARCHAR(100),
     fecha DATE,
     horaInicio TIME,
-    horaFin TIME
+    horaFin TIME,
+    numeroDePiso INT,
+    idZona VARCHAR(2)
 );
 
 CREATE TABLE Prestamo (
