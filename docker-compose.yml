@@ -18,7 +18,7 @@ services:
 
   api-wachi:
     container_name: wachiman-api
-    image: lazheart/api-wachi:latest
+    build: ./api
     env_file:
       - .env
     depends_on:
