@@ -250,6 +250,8 @@ export function StatisticsPage() {
                     color: '#f5f5f5',
                     fontSize: 12,
                   }}
+                  itemStyle={{ color: '#f5f5f5' }}
+                  labelStyle={{ color: '#a0a0a0', marginBottom: 4 }}
                 />
                 <Legend
                   wrapperStyle={{ fontSize: 11, color: '#a0a0a0' }}

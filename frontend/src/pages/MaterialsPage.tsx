@@ -13,7 +13,7 @@ import { Pagination } from '@/components/Pagination';
 import { SectionTitle } from '@/components/SectionTitle';
 import { BookOpen, Filter, X, ChevronRight } from 'lucide-react';
 import { truncate } from '@/utils/formatText';
-import { DEFAULT_PAGE_SIZE } from '@/constants';
+import { DEFAULT_PAGE_SIZE, GENRES, COUNTRIES } from '@/constants';
 
 /**
  * Página de catálogo de materiales con búsqueda, filtros y paginación.
@@ -140,14 +140,17 @@ export function MaterialsPage() {
             <label className="block text-xs text-[#a0a0a0] font-medium mb-1.5" htmlFor="filter-genre">
               Género
             </label>
-            <input
+            <select
               id="filter-genre"
-              type="text"
               className="input text-sm"
-              placeholder="Acción, Drama..."
               value={filters.genre ?? ''}
               onChange={(e) => handleFilterChange('genre', e.target.value)}
-            />
+            >
+              <option value="">Todos los géneros</option>
+              {GENRES.map((g) => (
+                <option key={g.value} value={g.value}>{g.label}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className="block text-xs text-[#a0a0a0] font-medium mb-1.5" htmlFor="filter-author">
@@ -166,17 +169,20 @@ export function MaterialsPage() {
             <label className="block text-xs text-[#a0a0a0] font-medium mb-1.5" htmlFor="filter-country">
               País
             </label>
-            <input
+            <select
               id="filter-country"
-              type="text"
               className="input text-sm"
-              placeholder="Japón, USA, España..."
               value={filters.country ?? ''}
               onChange={(e) => handleFilterChange('country', e.target.value)}
-            />
+            >
+              <option value="">Todos los países</option>
+              {COUNTRIES.map((c) => (
+                <option key={c.value} value={c.value}>{c.label}</option>
+              ))}
+            </select>
           </div>
           {/* Filtro de disponibilidad eliminado: la disponibilidad está en Ejemplar,
-              no en Material. Usar copias_disponibles como indicador visual. */}
+              no en Material. Ver copias en la página de detalle. */}
         </div>
       )}
 
@@ -249,13 +255,7 @@ function MaterialCard({
           )}
         </div>
       </div>
-      <div className="flex items-center justify-between pt-2 border-t border-[#2e2e2e]">
-        <Badge
-          variant={(material.copias_disponibles ?? 0) > 0 ? 'success' : 'danger'}
-          dot
-        >
-          {(material.copias_disponibles ?? 0) > 0 ? 'Disponible' : 'Sin copias'}
-        </Badge>
+      <div className="flex items-center justify-end pt-2 border-t border-[#2e2e2e]">
         <ChevronRight
           size={14}
           className="text-[#6b6b6b] group-hover:text-[#e66414] transition-colors"

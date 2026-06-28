@@ -54,3 +54,29 @@ export const CHART_COLORS = [
   '#fdba74',
   '#fed7aa',
 ];
+
+/** Géneros disponibles: { value: valor exacto en DB, label: texto visible } */
+export const GENRES: { value: string; label: string }[] = [
+  { value: 'Accion',     label: 'Acción' },
+  { value: 'Aventura',   label: 'Aventura' },
+  { value: 'Ciencia Fi', label: 'Ciencia Ficción' },
+  { value: 'Comedia',    label: 'Comedia' },
+  { value: 'Drama',      label: 'Drama' },
+  { value: 'Fantasia',   label: 'Fantasía' },
+  { value: 'Historico',  label: 'Histórico' },
+  { value: 'Misterio',   label: 'Misterio' },
+  { value: 'Romance',    label: 'Romance' },
+  { value: 'Terror',     label: 'Terror' },
+];
+
+/** Países disponibles: { value: valor exacto en DB, label: texto visible } */
+export const COUNTRIES: { value: string; label: string }[] = [
+  { value: 'Argentina', label: 'Argentina' },
+  { value: 'Corea',     label: 'Corea' },
+  { value: 'EEUU',      label: 'EEUU' },
+  { value: 'Espana',    label: 'España' },
+  { value: 'Francia',   label: 'Francia' },
+  { value: 'Japon',     label: 'Japón' },
+  { value: 'Mexico',    label: 'México' },
+  { value: 'Peru',      label: 'Perú' },
+];

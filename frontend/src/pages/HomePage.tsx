@@ -64,7 +64,6 @@ export function HomePage() {
     <div>
       {/* HERO */}
       <section className="relative overflow-hidden">
-        <div className="hero-gradient absolute inset-0 pointer-events-none" />
         <div
           className="absolute top-0 right-0 w-96 h-96 rounded-full opacity-5 pointer-events-none"
           style={{
@@ -74,23 +73,17 @@ export function HomePage() {
         />
         <div className="section-container py-24 relative">
           <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#e66414]/10 border border-[#e66414]/20 text-[#ff914d] text-xs font-semibold mb-6">
-              <Star size={12} />
-              Comicteca Guachimán
-            </div>
             <h1 className="font-display text-5xl md:text-6xl font-black text-[#f5f5f5] leading-[1.1] mb-6">
-              Tu biblioteca de{' '}
-              <span className="gradient-text">cómics</span>{' '}
-              digital
+              Biblioteca Digital Guachimán
             </h1>
             <p className="text-[#a0a0a0] text-lg leading-relaxed mb-10 max-w-lg">
-              Explora materiales, gestiona préstamos, descubre eventos y conoce las instituciones que hacen posible la cultura del cómic.
+              Explora materiales, consulta préstamos, revisa eventos y conoce las instituciones que hacen posible la cultura del cómic,manga y novelas.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
               <SearchBar
                 placeholder="Busca un cómic, manga, novela gráfica..."
                 onSearch={handleSearch}
-                className="flex-1"
+                className="flex-4"
                 size="lg"
               />
               <button
