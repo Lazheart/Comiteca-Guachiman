@@ -19,7 +19,6 @@ import {
   ArrowRight,
   CheckCircle,
   Clock,
-  Star,
 } from 'lucide-react';
 
 /**
