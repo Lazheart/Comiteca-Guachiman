@@ -10,6 +10,7 @@ export const ROUTES = {
   DONATIONS: '/donaciones',
   LOANS: '/prestamos',
   RESERVATIONS: '/reservas',
+  COPIES: '/copias',
   STATISTICS: '/estadisticas',
 } as const;
 

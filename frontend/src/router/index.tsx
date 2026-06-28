@@ -17,6 +17,7 @@ const DonationsPage = lazy(() => import('@/pages/DonationsPage').then((m) => ({ 
 const LoansPage = lazy(() => import('@/pages/LoansPage').then((m) => ({ default: m.LoansPage })));
 const ReservationsPage = lazy(() => import('@/pages/ReservationsPage').then((m) => ({ default: m.ReservationsPage })));
 const StatisticsPage = lazy(() => import('@/pages/StatisticsPage').then((m) => ({ default: m.StatisticsPage })));
+const CopiesPage = lazy(() => import('@/pages/CopiesPage').then((m) => ({ default: m.CopiesPage })));
 
 /**
  * Configuración central de rutas de la aplicación.
@@ -38,6 +39,7 @@ export function AppRouter() {
             <Route path={ROUTES.LOANS} element={<LoansPage />} />
             <Route path={ROUTES.RESERVATIONS} element={<ReservationsPage />} />
             <Route path={ROUTES.STATISTICS} element={<StatisticsPage />} />
+            <Route path={ROUTES.COPIES} element={<CopiesPage />} />
             {/* Redirigir rutas desconocidas al inicio */}
             <Route path="*" element={<Navigate to={ROUTES.HOME} replace />} />
           </Routes>

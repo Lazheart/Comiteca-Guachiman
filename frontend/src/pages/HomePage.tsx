@@ -163,7 +163,7 @@ export function HomePage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {recentMaterials.map((material) => (
               <article
-                key={material.id}
+                key={material.id ?? `material-${material.titulo}-${material.autor}`}
                 className="card p-5 cursor-pointer group"
                 onClick={() => navigate(`/materiales/${material.id}`)}
                 id={`material-card-${material.id}`}
@@ -222,7 +222,7 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {previewEvents.map((event) => (
                 <article
-                  key={event.id}
+                  key={event.id ?? `event-${event.nombre || (event as any).tema || ''}-${event.fecha}`}
                   className="card p-5 cursor-pointer group"
                   onClick={() => navigate(`/eventos/${event.id}`)}
                   id={`event-card-${event.id}`}
@@ -274,7 +274,7 @@ export function HomePage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {previewInstitutions.map((inst) => (
               <article
-                key={inst.id}
+                key={inst.id ?? `inst-${inst.nombre}-${inst.tipo || ''}`}
                 className="card p-5 cursor-pointer group text-center"
                 onClick={() => navigate(`/instituciones/${inst.id}`)}
                 id={`institution-card-${inst.id}`}
@@ -315,7 +315,7 @@ export function HomePage() {
             <div className="flex flex-col gap-3">
               {mostLoaned.slice(0, 5).map((item, idx) => (
                 <div
-                  key={item.material_id}
+                  key={item.material_id ?? `mostloaned-${item.titulo}`}
                   className="flex items-center gap-4 p-4 card cursor-pointer group"
                   onClick={() => navigate(`/materiales/${item.material_id}`)}
                   id={`trending-card-${item.material_id}`}

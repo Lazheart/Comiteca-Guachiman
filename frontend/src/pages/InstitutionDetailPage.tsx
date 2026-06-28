@@ -125,7 +125,11 @@ export function InstitutionDetailPage() {
           ) : (
             <div className="flex flex-col gap-3">
               {donations.map((donation) => (
-                <div key={donation.id} className="card p-4 flex items-start gap-4" id={`donation-${donation.id}`}>
+                <div
+                  key={donation.id ?? `donation-${donation.tipo || 'Donación'}-${donation.fecha || (donation as any).fechadonacion || (donation as any).fechaDonacion || ''}-${donation.monto || (donation as any).ejemplares_donados || ''}`}
+                  className="card p-4 flex items-start gap-4"
+                  id={`donation-${donation.id}`}
+                >
                   <div className="w-9 h-9 rounded-lg bg-[#facc15]/10 flex items-center justify-center shrink-0">
                     <Gift size={16} className="text-[#facc15]" />
                   </div>
@@ -166,7 +170,7 @@ export function InstitutionDetailPage() {
             <div className="flex flex-col gap-3">
               {events.map((event) => (
                 <div
-                  key={event.id}
+                  key={event.id ?? `event-${event.nombre || (event as any).tema || ''}-${event.fecha}`}
                   className="card p-4 cursor-pointer group flex items-start gap-4"
                   onClick={() => navigate(`/eventos/${event.id}`)}
                   id={`sponsored-event-${event.id}`}

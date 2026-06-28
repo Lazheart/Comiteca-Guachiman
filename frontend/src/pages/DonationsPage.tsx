@@ -93,7 +93,10 @@ export function DonationsPage() {
               </thead>
               <tbody>
                 {donations.map((donation) => (
-                  <tr key={donation.id} id={`donation-row-${donation.id}`}>
+                  <tr
+                    key={donation.id ?? `donation-${donation.institucion_nombre || (donation as any).institucion_donante || ''}-${donation.fecha || (donation as any).fechadonacion || (donation as any).fechaDonacion || ''}-${donation.monto || (donation as any).ejemplares_donados || ''}`}
+                    id={`donation-row-${donation.id}`}
+                  >
                     <td className="font-mono text-[#e66414]">#{donation.id}</td>
                     <td>
                       <div className="flex items-center gap-2">

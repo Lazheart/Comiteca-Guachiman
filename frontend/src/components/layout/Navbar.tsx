@@ -12,6 +12,7 @@ import {
   X,
   Search,
   Home,
+  Layers,
 } from 'lucide-react';
 import { ROUTES, APP_NAME } from '@/constants';
 
@@ -24,6 +25,7 @@ const navItems = [
   { to: ROUTES.LOANS, label: 'Préstamos', icon: <BookMarked size={16} /> },
   { to: ROUTES.RESERVATIONS, label: 'Reservas', icon: <ClipboardList size={16} /> },
   { to: ROUTES.STATISTICS, label: 'Estadísticas', icon: <BarChart3 size={16} /> },
+  { to: ROUTES.COPIES, label: 'Copias', icon: <Layers size={16} /> },
 ];
 
 /**
