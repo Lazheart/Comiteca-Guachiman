@@ -125,3 +125,5 @@ pnpm run dev
 - El .env.example es un archivo de ejemplo para el archivo .env , se debe crear un archivo .env con las credenciales de la base de datos. 
 - Las imagenes de docker son sacadas de [Docker Hub](https://hub.docker.com/): [postgresql:17-alpine](https://hub.docker.com/_/postgres/tags?name=17-alpine) y [lazhearth/wachiman-api:latest](https://hub.docker.com/r/lazhearth/wachiman-api/tags?name=latest)
 - Para la demo de este proyecto se utilizo Amazon Web Services , sin embargo se puede ejecutar localmente con Docker Compose o en cualquier otra plataforma que soporte Docker.
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Lazheart/Comiteca-Guachiman)
