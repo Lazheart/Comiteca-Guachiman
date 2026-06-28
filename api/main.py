@@ -5,6 +5,7 @@ from endpoints import materials, copies, events, institutions, donations, loans,
 
 app = FastAPI(title="Comicteca Guachimán API")
 
+# Configuración de CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
