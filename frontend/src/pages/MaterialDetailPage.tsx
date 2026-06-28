@@ -16,6 +16,7 @@ import {
   XCircle,
   FileText,
 } from 'lucide-react';
+import { apiField } from '@/utils/apiField';
 
 /**
  * Página de detalle de un material con info completa y listado de copias.
@@ -48,7 +49,18 @@ export function MaterialDetailPage() {
       </div>
     );
 
-  const availableCopies = copies?.filter((c) => c.disponible !== false) ?? [];
+  const availableCopies = copies?.filter((c) => {
+    const disp = apiField<string>(c, 'disponibilidad');
+    return disp === 'Disponible';
+  }) ?? [];
+
+  const paisOrigen = apiField<string>(material, 'paisOrigen', 'paisorigen');
+  const fechaPublicacion = apiField<string>(material, 'fechaPublicacion', 'fechapublicacion');
+  const ilustracion = apiField<string>(material, 'ilustracion');
+  const editorial = apiField<string>(material, 'editorial');
+  const narracion = apiField<string>(material, 'narracion');
+  const tipoComic = apiField<string>(material, 'tipoComic', 'tipocomic');
+  const serializacion = apiField<string>(material, 'serializacion');
 
   return (
     <div className="section-container py-10">
@@ -70,10 +82,12 @@ export function MaterialDetailPage() {
               <BookOpen size={56} className="text-[#e66414] opacity-70" />
             </div>
             <Badge
-              variant={material.disponible !== false ? 'success' : 'danger'}
+              variant={(material.copias_disponibles ?? availableCopies.length) > 0 ? 'success' : 'danger'}
               dot
             >
-              {material.disponible !== false ? 'Disponible para préstamo' : 'No disponible'}
+              {(material.copias_disponibles ?? availableCopies.length) > 0
+                ? 'Disponible para préstamo'
+                : 'No disponible'}
             </Badge>
             {material.total_copias !== undefined && (
               <div className="text-center">
@@ -94,9 +108,11 @@ export function MaterialDetailPage() {
           {/* Header */}
           <div>
             {material.genero && (
-              <Badge variant="primary" className="mb-3">
-                {material.genero}
-              </Badge>
+              <div className="mb-3">
+                <Badge variant="primary">
+                  {material.genero}
+                </Badge>
+              </div>
             )}
             <h1 className="font-display text-4xl font-black text-[#f5f5f5] leading-tight mb-2">
               {material.titulo}
@@ -104,16 +120,37 @@ export function MaterialDetailPage() {
             <p className="text-[#a0a0a0] text-lg">{material.autor}</p>
           </div>
 
-          {/* Descripción */}
-          {material.descripcion && (
+          {/* Descripción / Sinopsis — no existe en tabla Material; solo se muestra si el backend la incluye */}
+          {narracion && (
             <div className="card p-5">
               <div className="flex items-center gap-2 text-[#a0a0a0] text-xs font-semibold uppercase tracking-wider mb-3">
                 <FileText size={13} />
-                Sinopsis
+                Narración (Novela)
               </div>
-              <p className="text-[#d0d0d0] text-sm leading-relaxed">
-                {material.descripcion}
-              </p>
+              <p className="text-[#d0d0d0] text-sm leading-relaxed">{narracion}</p>
+            </div>
+          )}
+
+          {(tipoComic || serializacion) && (
+            <div className="card p-5">
+              <div className="flex items-center gap-2 text-[#a0a0a0] text-xs font-semibold uppercase tracking-wider mb-3">
+                <BookMarked size={13} />
+                Detalle de cómic
+              </div>
+              <dl className="grid grid-cols-2 gap-4">
+                {tipoComic && (
+                  <div>
+                    <dt className="text-[#6b6b6b] text-xs mb-1">Tipo</dt>
+                    <dd className="text-[#f5f5f5] text-sm">{tipoComic}</dd>
+                  </div>
+                )}
+                {serializacion && (
+                  <div>
+                    <dt className="text-[#6b6b6b] text-xs mb-1">Serialización</dt>
+                    <dd className="text-[#f5f5f5] text-sm">{serializacion}</dd>
+                  </div>
+                )}
+              </dl>
             </div>
           )}
 
@@ -125,10 +162,10 @@ export function MaterialDetailPage() {
             <dl className="grid grid-cols-2 gap-4">
               {[
                 { icon: <User size={14} />, label: 'Autor', value: material.autor },
-                { icon: <Globe size={14} />, label: 'País', value: material.pais },
-                { icon: <Building2 size={14} />, label: 'Editorial', value: material.editorial },
-                { icon: <Hash size={14} />, label: 'Año', value: material.anio?.toString() },
-                { icon: <BookMarked size={14} />, label: 'Páginas', value: material.num_paginas?.toString() },
+                { icon: <Globe size={14} />, label: 'País de origen', value: paisOrigen },
+                { icon: <Building2 size={14} />, label: 'Editorial', value: editorial },
+                { icon: <Hash size={14} />, label: 'Publicación', value: fechaPublicacion },
+                { icon: <BookMarked size={14} />, label: 'Ilustración', value: ilustracion },
                 { icon: <BookOpen size={14} />, label: 'Género', value: material.genero },
               ]
                 .filter((d) => d.value)
@@ -162,39 +199,44 @@ export function MaterialDetailPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID Copia</th>
-                  <th>Estado</th>
-                  <th>Disponible</th>
-                  <th>Notas</th>
+                  <th># Copia</th>
+                  <th>Estado conservación</th>
+                  <th>Disponibilidad</th>
                 </tr>
               </thead>
               <tbody>
-                {copies.map((copy) => (
-                  <tr key={copy.id} id={`copy-row-${copy.id}`}>
-                    <td className="font-mono text-[#e66414]">#{copy.id}</td>
+                {copies.map((copy) => {
+                  const materialId = apiField<number>(copy, 'material_id') ?? 0;
+                  const numeroCopia = apiField<number>(copy, 'numeroCopia', 'numerocopia') ?? 0;
+                  const estadoConservacion = apiField<string>(copy, 'estadoConservacion', 'estadoconservacion');
+                  const disponibilidad = apiField<string>(copy, 'disponibilidad');
+
+                  return (
+                  <tr key={`${materialId}-${numeroCopia}`} id={`copy-row-${materialId}-${numeroCopia}`}>
+                    <td className="font-mono text-[#e66414]">#{numeroCopia}</td>
                     <td>
-                      {copy.estado ? (
-                        <Badge variant="neutral">{copy.estado}</Badge>
+                      {estadoConservacion ? (
+                        <Badge variant="neutral">{estadoConservacion}</Badge>
                       ) : (
                         <span className="text-[#6b6b6b]">—</span>
                       )}
                     </td>
                     <td>
-                      {copy.disponible !== false ? (
+                      {disponibilidad === 'Disponible' ? (
                         <span className="flex items-center gap-1.5 text-green-400 text-sm">
                           <CheckCircle size={14} />
-                          Sí
+                          Disponible
                         </span>
                       ) : (
                         <span className="flex items-center gap-1.5 text-red-400 text-sm">
                           <XCircle size={14} />
-                          No
+                          {disponibilidad ?? 'No disponible'}
                         </span>
                       )}
                     </td>
-                    <td className="text-[#6b6b6b] text-xs">{copy.notas ?? '—'}</td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

@@ -19,14 +19,19 @@ import {
   Hash,
   BookOpen,
   User,
+  Copy,
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
 import { DEFAULT_PAGE_SIZE } from '@/constants';
+import { apiField } from '@/utils/apiField';
 
 type LoanTab = 'all' | 'active' | 'expired';
 
 /**
  * Página de préstamos con tabs: todos, activos, vencidos y búsqueda por DNI/material.
+ * Usa los campos reales de la tabla Prestamo:
+ *   id, miembro_DNI, bibliotecario_DNI, material_id, numeroCopia,
+ *   fechaPrestamo, fechaLimite, fechaDevolucion, estado
  */
 export function LoansPage() {
   const [activeTab, setActiveTab] = useState<LoanTab>('all');
@@ -98,7 +103,7 @@ export function LoansPage() {
       {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <StatCard label="Total" value={allLoans?.length ?? '—'} icon={<BookMarked size={20} />} color="primary" />
-        <StatCard label="Activos" value={activeLoans?.length ?? '—'} icon={<CheckCircle size={20} />} color="success" />
+        <StatCard label="En Curso" value={activeLoans?.length ?? '—'} icon={<CheckCircle size={20} />} color="success" />
         <StatCard label="Vencidos" value={expiredLoans?.length ?? '—'} icon={<AlertTriangle size={20} />} color="danger" />
       </div>
 
@@ -141,7 +146,7 @@ export function LoansPage() {
         <div className="flex gap-1 p-1 bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl w-fit mb-6">
           {([
             { key: 'all', label: 'Todos' },
-            { key: 'active', label: 'Activos' },
+            { key: 'active', label: 'En Curso' },
             { key: 'expired', label: 'Vencidos' },
           ] as { key: LoanTab; label: string }[]).map((tab) => (
             <button
@@ -175,41 +180,66 @@ export function LoansPage() {
                 <tr>
                   <th>#</th>
                   <th>Miembro DNI</th>
-                  <th>Material</th>
-                  <th>Fecha préstamo</th>
-                  <th>Fecha devolución</th>
+                  <th>Bibliotecario DNI</th>
+                  <th>Material ID</th>
+                  <th>Copia</th>
+                  <th>F. Préstamo</th>
+                  <th>F. Límite</th>
+                  <th>F. Devolución</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((loan) => (
+                {paginated.map((loan) => {
+                  const miembroDni = apiField<number>(loan, 'miembro_DNI', 'miembro_dni');
+                  const bibliotecarioDni = apiField<number>(loan, 'bibliotecario_DNI', 'bibliotecario_dni');
+                  const materialId = apiField<number>(loan, 'material_id');
+                  const numeroCopia = apiField<number>(loan, 'numeroCopia', 'numerocopia');
+                  const fechaPrestamo = apiField<string>(loan, 'fechaPrestamo', 'fechaprestamo');
+                  const fechaLimite = apiField<string>(loan, 'fechaLimite', 'fechalimite');
+                  const fechaDevolucion = apiField<string | null>(loan, 'fechaDevolucion', 'fechadevolucion');
+                  const estado = apiField<string>(loan, 'estado');
+
+                  return (
                   <tr key={loan.id} id={`loan-row-${loan.id}`}>
                     <td className="font-mono text-[#e66414]">#{loan.id}</td>
                     <td>
                       <div className="flex items-center gap-1.5">
                         <User size={12} className="text-[#6b6b6b]" />
-                        {loan.miembro_dni}
-                        {loan.miembro_nombre && (
-                          <span className="text-[#6b6b6b] text-xs">({loan.miembro_nombre})</span>
-                        )}
+                        {miembroDni}
+                      </div>
+                    </td>
+                    <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen size={12} className="text-[#6b6b6b]" />
+                        {materialId ?? '—'}
                       </div>
                     </td>
                     <td>
                       <div className="flex items-center gap-1.5">
-                        <BookOpen size={12} className="text-[#6b6b6b]" />
-                        {loan.material_titulo ?? `ID ${loan.material_id}`}
+                        <Copy size={12} className="text-[#6b6b6b]" />
+                        #{numeroCopia}
                       </div>
                     </td>
-                    <td className="text-[#a0a0a0]">{formatDate(loan.fecha_prestamo)}</td>
-                    <td className="text-[#a0a0a0]">{formatDate(loan.fecha_devolucion)}</td>
+                    <td className="text-[#a0a0a0]">{fechaPrestamo ? formatDate(fechaPrestamo) : '—'}</td>
+                    <td className="text-[#a0a0a0]">
+                      {fechaLimite ? formatDate(fechaLimite) : '—'}
+                    </td>
+                    <td className="text-[#a0a0a0]">
+                      {fechaDevolucion ? formatDate(fechaDevolucion) : (
+                        <span className="text-[#6b6b6b] text-xs italic">Pendiente</span>
+                      )}
+                    </td>
                     <td>
                       <LoanStatusBadge
-                        estado={loan.estado}
-                        fechaDevolucionReal={loan.fecha_devolucion_real}
+                        estado={estado}
+                        fechaDevolucion={fechaDevolucion}
                       />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -222,16 +252,19 @@ export function LoansPage() {
 
 function LoanStatusBadge({
   estado,
-  fechaDevolucionReal,
+  fechaDevolucion,
 }: {
   estado?: string;
-  fechaDevolucionReal?: string | null;
+  fechaDevolucion?: string | null;
 }) {
-  if (estado === 'devuelto' || fechaDevolucionReal) {
+  // Si tiene fechaDevolucion real, está devuelto
+  if (fechaDevolucion) {
     return <Badge variant="success" dot>Devuelto</Badge>;
   }
-  if (estado === 'vencido') {
-    return <Badge variant="danger" dot>Vencido</Badge>;
+  // Estado "En Curso" es el valor real en la DB
+  if (estado === 'En Curso') {
+    return <Badge variant="info" dot>En Curso</Badge>;
   }
-  return <Badge variant="info" dot>Activo</Badge>;
+  // Sin estado ni devolución → vencido
+  return <Badge variant="danger" dot>Vencido</Badge>;
 }

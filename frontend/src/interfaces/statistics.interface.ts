@@ -1,68 +1,55 @@
 /**
- * Interfaces para Estadísticas
- * PROVISIONAL - algunas interfaces pueden requerir ajuste
- * según las respuestas reales del backend.
+ * Interfaces para Estadísticas — alineadas con las respuestas reales de la API.
  */
 
+/** GET /statistics/most-loaned-materials */
 export interface MostLoanedMaterial {
-  material_id: number;
   titulo: string;
   total_prestamos: number;
-  autor?: string;
-  genero?: string;
 }
 
+/** GET /statistics/events-attendance */
 export interface EventAttendance {
-  evento_id: number;
-  nombre: string;
+  tema: string;
   fecha: string;
-  capacidad?: number;
-  asistentes: number;
-  porcentaje_ocupacion?: number;
+  total_asistentes: number;
 }
 
-export interface MaterialAvailability {
-  /** PROVISIONAL - ajustar según schema real */
-  total_materiales?: number;
-  disponibles?: number;
-  prestados?: number;
-  reservados?: number;
-  porcentaje_disponible?: number;
-  /** Datos por género */
-  por_genero?: Array<{
-    genero: string;
-    total: number;
-    disponibles: number;
-  }>;
-  [key: string]: unknown;
+/** GET /statistics/material-availability — una fila por título y disponibilidad */
+export interface MaterialAvailabilityRow {
+  titulo: string;
+  disponibilidad: string;
+  cantidad: number;
 }
 
+/** Resumen calculado en el frontend a partir de MaterialAvailabilityRow[] */
+export interface MaterialAvailabilitySummary {
+  total_ejemplares: number;
+  disponibles: number;
+  no_disponibles: number;
+  por_disponibilidad: MaterialAvailabilityRow[];
+}
+
+/** GET /statistics/top-donors */
 export interface TopDonor {
-  institucion_id: number;
-  institucion_nombre: string;
-  total_donaciones: number;
-  monto_total?: number;
+  institucion_donante: string;
+  total_ejemplares: number;
 }
 
-export interface Sanction {
-  /** PROVISIONAL - ajustar según schema real */
-  miembro_dni?: number;
-  miembro_nombre?: string;
-  tipo_sancion?: string;
-  fecha_inicio?: string;
-  fecha_fin?: string;
-  monto?: number;
-  motivo?: string;
-  [key: string]: unknown;
+/** GET /statistics/sanctions — agregado por motivo */
+export interface SanctionStat {
+  motivo: string;
+  cantidad: number;
 }
 
+/** GET /statistics/overdue-loans — vista vista_prestamos_alertas */
 export interface OverdueLoan {
-  /** PROVISIONAL - ajustar según schema real */
-  prestamo_id?: number;
-  miembro_dni?: number;
-  miembro_nombre?: string;
-  material_titulo?: string;
-  fecha_devolucion?: string;
-  dias_vencido?: number;
-  [key: string]: unknown;
+  id_prestamo: number;
+  miembro_nombre: string;
+  titulo_material: string;
+  fechaPrestamo: string;
+  fechaLimite: string;
+  fechaDevolucion?: string | null;
+  estado_registro?: string;
+  estado_tiempo_real: string;
 }

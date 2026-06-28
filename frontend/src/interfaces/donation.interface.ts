@@ -1,34 +1,35 @@
 /**
  * Interfaces para Donaciones
- * Basadas en las respuestas reales de la API.
+ *
+ * Tabla Donacion: institucion_id, bibliotecario_DNI, material_id, fechaDonacion, cantidad
+ * Vista vista_auditoria_donaciones (GET /donations): institucion_donante, material_recibido,
+ *   fechaDonacion, ejemplares_donados, bibliotecario_receptor
  */
 
-export interface Donation {
-  /** ID único de la donación */
-  id: number;
-  /** ID de la institución donante */
+/** Registro crudo de la tabla Donacion (GET /institutions/{id}/donations) */
+export interface DonationRecord {
   institucion_id: number;
-  /** Nombre de la institución donante */
-  institucion_nombre?: string;
-  /** Fecha de la donación (ISO string) */
-  fecha: string;
-  /** Descripción / detalle de la donación */
-  descripcion?: string;
-  /** Monto monetario (si aplica) */
-  monto?: number;
-  /** Tipo de donación (material, económica, etc.) */
-  tipo?: string;
-  /** Cantidad de materiales donados */
-  cantidad_materiales?: number;
+  bibliotecario_DNI?: number;
+  material_id: number;
+  fechaDonacion: string;
+  cantidad: number;
 }
 
-export interface DonationStatistics {
-  /** Total de donaciones */
-  total_donaciones?: number;
-  /** Monto total donado */
-  monto_total?: number;
-  /** Institución con más donaciones */
-  top_institucion?: string;
-  /** PROVISIONAL - ajustar según respuesta real del backend */
-  [key: string]: unknown;
+/** Fila de la vista vista_auditoria_donaciones (GET /donations) */
+export interface DonationAudit {
+  institucion_donante: string;
+  material_recibido: string;
+  fechaDonacion: string;
+  ejemplares_donados: number;
+  bibliotecario_receptor?: string;
 }
+
+/** Fila agregada de GET /donations/statistics */
+export interface DonationStatisticsRow {
+  institucion_donante: string;
+  total_ejemplares: number;
+  numero_donaciones: number;
+}
+
+/** Alias legacy usado en institutionService */
+export type Donation = DonationRecord;

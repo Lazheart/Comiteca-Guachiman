@@ -1,21 +1,17 @@
-import type { Donation, DonationStatistics } from '@/interfaces';
+import type { DonationAudit, DonationStatisticsRow } from '@/interfaces';
 import api from './api';
 
 /** Servicio para consumir los endpoints de Donaciones */
 export const donationService = {
-  /**
-   * Obtiene todas las donaciones.
-   */
-  async getAll(): Promise<Donation[]> {
-    const { data } = await api.get<Donation[]>('/donations');
+  /** GET /donations — vista vista_auditoria_donaciones */
+  async getAll(): Promise<DonationAudit[]> {
+    const { data } = await api.get<DonationAudit[]>('/donations');
     return data;
   },
 
-  /**
-   * Obtiene estadísticas de donaciones.
-   */
-  async getStatistics(): Promise<DonationStatistics> {
-    const { data } = await api.get<DonationStatistics>('/donations/statistics');
+  /** GET /donations/statistics — agregado por institución donante */
+  async getStatistics(): Promise<DonationStatisticsRow[]> {
+    const { data } = await api.get<DonationStatisticsRow[]>('/donations/statistics');
     return data;
   },
 };

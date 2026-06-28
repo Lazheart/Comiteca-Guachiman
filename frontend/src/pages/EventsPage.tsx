@@ -10,10 +10,11 @@ import { EmptyState } from '@/components/EmptyState';
 import { Pagination } from '@/components/Pagination';
 import { SectionTitle } from '@/components/SectionTitle';
 import { Badge } from '@/components/Badge';
-import { CalendarDays, MapPin, Clock, Users, ChevronRight } from 'lucide-react';
+import { CalendarDays, MapPin, Clock, ChevronRight } from 'lucide-react';
 import { formatDate, isPast, relativeDateLabel } from '@/utils/formatDate';
 import { truncate } from '@/utils/formatText';
 import { DEFAULT_PAGE_SIZE } from '@/constants';
+import { apiField } from '@/utils/apiField';
 
 /**
  * Página de eventos con filtros de fecha y vista de próximos eventos.
@@ -128,6 +129,12 @@ export function EventsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {paginated.map((event) => {
               const past = isPast(event.fecha);
+              const piso = apiField<number>(event, 'numeroDePiso', 'numerodepiso');
+              const zona = apiField<string>(event, 'idZona', 'idzona');
+              const horaInicio = apiField<string>(event, 'horaInicio', 'horainicio');
+              const horaFin = apiField<string>(event, 'horaFin', 'horafin');
+              const asistentes = apiField<number>(event, 'total_asistentes');
+
               return (
                 <article
                   key={event.id}
@@ -150,38 +157,32 @@ export function EventsPage() {
                     </Badge>
                   </div>
 
-                  {/* Título */}
+                  {/* Tema (nombre real del campo en DB) */}
                   <div className="flex-1">
-                    <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight group-hover:text-[#e66414] transition-colors mb-2">
-                      {truncate(event.nombre, 70)}
+                    <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight group-hover:text-[#e66414] transition-colors mb-1">
+                      {truncate(event.tema, 70)}
                     </h3>
-                    {event.descripcion && (
-                      <p className="text-[#6b6b6b] text-xs leading-relaxed">
-                        {truncate(event.descripcion, 100)}
-                      </p>
-                    )}
                   </div>
 
                   {/* Metadatos */}
                   <div className="flex flex-col gap-1.5 pt-3 border-t border-[#2e2e2e]">
-                    {event.lugar && (
+                    {piso !== null && piso !== undefined && (
                       <p className="text-[#a0a0a0] text-xs flex items-center gap-1.5">
                         <MapPin size={11} />
-                        {truncate(event.lugar, 40)}
+                        Piso {piso}
+                        {zona ? ` · Zona ${zona}` : ''}
                       </p>
                     )}
-                    {event.hora_inicio && (
+                    {horaInicio && (
                       <p className="text-[#a0a0a0] text-xs flex items-center gap-1.5">
                         <Clock size={11} />
-                        {event.hora_inicio}
-                        {event.hora_fin ? ` – ${event.hora_fin}` : ''}
+                        {horaInicio}
+                        {horaFin ? ` – ${horaFin}` : ''}
                       </p>
                     )}
-                    {event.capacidad !== undefined && (
-                      <p className="text-[#a0a0a0] text-xs flex items-center gap-1.5">
-                        <Users size={11} />
-                        Cap. {event.capacidad}
-                        {event.asistentes !== undefined ? ` · ${event.asistentes} asistentes` : ''}
+                    {asistentes !== undefined && (
+                      <p className="text-[#a0a0a0] text-xs">
+                        {asistentes} asistentes
                       </p>
                     )}
                   </div>

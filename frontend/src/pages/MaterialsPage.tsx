@@ -26,7 +26,7 @@ export function MaterialsPage() {
     genre: searchParams.get('genre') ?? undefined,
     author: searchParams.get('author') ?? undefined,
     country: searchParams.get('country') ?? undefined,
-    available: searchParams.get('available') === 'true' ? true : undefined,
+    // "available" no existe como campo en Material; se filtra en el backend por Ejemplar.disponibilidad
   });
   const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '');
   const [searchResults, setSearchResults] = useState<Material[] | null>(null);
@@ -96,7 +96,7 @@ export function MaterialsPage() {
   };
 
   const hasActiveFilters =
-    !!filters.genre || !!filters.author || !!filters.country || !!filters.available;
+    !!filters.genre || !!filters.author || !!filters.country;
 
   return (
     <div className="section-container py-10">
@@ -175,30 +175,8 @@ export function MaterialsPage() {
               onChange={(e) => handleFilterChange('country', e.target.value)}
             />
           </div>
-          <div className="flex flex-col justify-center">
-            <label className="flex items-center gap-3 cursor-pointer" htmlFor="filter-available">
-              <div
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  filters.available ? 'bg-[#e66414]' : 'bg-[#2e2e2e]'
-                }`}
-                onClick={() => handleFilterChange('available', !filters.available)}
-              >
-                <div
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform ${
-                    filters.available ? 'translate-x-5' : ''
-                  }`}
-                />
-              </div>
-              <input
-                id="filter-available"
-                type="checkbox"
-                className="sr-only"
-                checked={!!filters.available}
-                onChange={(e) => handleFilterChange('available', e.target.checked || undefined)}
-              />
-              <span className="text-sm text-[#a0a0a0]">Solo disponibles</span>
-            </label>
-          </div>
+          {/* Filtro de disponibilidad eliminado: la disponibilidad está en Ejemplar,
+              no en Material. Usar copias_disponibles como indicador visual. */}
         </div>
       )}
 
@@ -265,17 +243,18 @@ function MaterialCard({
           {material.genero && (
             <Badge variant="primary">{truncate(material.genero, 15)}</Badge>
           )}
-          {material.pais && (
-            <Badge variant="neutral">{material.pais}</Badge>
+          {/* paisOrigen es el campo real de Material (no "pais") */}
+          {material.paisOrigen && (
+            <Badge variant="neutral">{material.paisOrigen}</Badge>
           )}
         </div>
       </div>
       <div className="flex items-center justify-between pt-2 border-t border-[#2e2e2e]">
         <Badge
-          variant={material.disponible !== false ? 'success' : 'danger'}
+          variant={(material.copias_disponibles ?? 0) > 0 ? 'success' : 'danger'}
           dot
         >
-          {material.disponible !== false ? 'Disponible' : 'No disponible'}
+          {(material.copias_disponibles ?? 0) > 0 ? 'Disponible' : 'Sin copias'}
         </Badge>
         <ChevronRight
           size={14}

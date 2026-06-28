@@ -11,7 +11,6 @@ export const materialService = {
     if (filters?.genre) params['genre'] = filters.genre;
     if (filters?.author) params['author'] = filters.author;
     if (filters?.country) params['country'] = filters.country;
-    if (filters?.available !== undefined) params['available'] = filters.available;
     const { data } = await api.get<Material[]>('/materials', { params });
     return data;
   },

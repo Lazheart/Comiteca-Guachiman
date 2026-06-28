@@ -5,23 +5,29 @@ import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
 import { SectionTitle } from '@/components/SectionTitle';
 import { StatCard } from '@/components/StatCard';
-import { Badge } from '@/components/Badge';
-import { Gift, Building2, DollarSign, TrendingUp } from 'lucide-react';
+import { Gift, Building2, BookOpen, TrendingUp, User } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
-import { truncate } from '@/utils/formatText';
+import { apiField } from '@/utils/apiField';
 
 /**
  * Página de donaciones con listado y estadísticas.
+ * GET /donations devuelve vista_auditoria_donaciones:
+ *   institucion_donante, material_recibido, fechaDonacion,
+ *   ejemplares_donados, bibliotecario_receptor
  */
 export function DonationsPage() {
   const { data: donations, loading, error, refetch } = useApi(
     () => donationService.getAll(),
     [],
   );
-  const { data: stats } = useApi(
+  const { data: statsRows } = useApi(
     () => donationService.getStatistics(),
     [],
   );
+
+  const totalDonaciones = statsRows?.reduce((sum, row) => sum + Number(row.numero_donaciones), 0);
+  const totalEjemplares = statsRows?.reduce((sum, row) => sum + Number(row.total_ejemplares), 0);
+  const topDonante = statsRows?.[0]?.institucion_donante;
 
   return (
     <div className="section-container py-10">
@@ -30,43 +36,37 @@ export function DonationsPage() {
         subtitle="Registro de donaciones recibidas por la comicteca"
       />
 
-      {/* Estadísticas */}
-      {stats && (
+      {statsRows && statsRows.length > 0 && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          {stats.total_donaciones !== undefined && (
-            <StatCard
-              label="Total donaciones"
-              value={stats.total_donaciones}
-              icon={<Gift size={22} />}
-              color="primary"
-            />
-          )}
-          {stats.monto_total !== undefined && (
-            <StatCard
-              label="Monto total"
-              value={`S/ ${Number(stats.monto_total).toFixed(0)}`}
-              icon={<DollarSign size={22} />}
-              color="success"
-            />
-          )}
-          {stats.top_institucion && (
+          <StatCard
+            label="Total donaciones"
+            value={totalDonaciones ?? '—'}
+            icon={<Gift size={22} />}
+            color="primary"
+          />
+          <StatCard
+            label="Ejemplares donados"
+            value={totalEjemplares ?? '—'}
+            icon={<BookOpen size={22} />}
+            color="success"
+          />
+          {topDonante && (
             <StatCard
               label="Top donante"
-              value={truncate(stats.top_institucion, 20)}
+              value={String(topDonante).slice(0, 20)}
               icon={<TrendingUp size={22} />}
               color="warning"
             />
           )}
           <StatCard
             label="Instituciones"
-            value={new Set(donations?.map((d) => d.institucion_id)).size ?? '—'}
+            value={statsRows.length}
             icon={<Building2 size={22} />}
             color="info"
           />
         </div>
       )}
 
-      {/* Tabla de donaciones */}
       <div>
         <h2 className="font-display text-xl font-bold text-[#f5f5f5] mb-4">
           Listado de donaciones
@@ -83,49 +83,55 @@ export function DonationsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
-                  <th>Institución</th>
-                  <th>Fecha</th>
-                  <th>Tipo</th>
-                  <th>Monto</th>
-                  <th>Descripción</th>
+                  <th>Institución donante</th>
+                  <th>Material recibido</th>
+                  <th>Ejemplares</th>
+                  <th>Fecha donación</th>
+                  <th>Bibliotecario receptor</th>
                 </tr>
               </thead>
               <tbody>
-                {donations.map((donation) => (
-                  <tr
-                    key={donation.id ?? `donation-${donation.institucion_nombre || (donation as any).institucion_donante || ''}-${donation.fecha || (donation as any).fechadonacion || (donation as any).fechaDonacion || ''}-${donation.monto || (donation as any).ejemplares_donados || ''}`}
-                    id={`donation-row-${donation.id}`}
-                  >
-                    <td className="font-mono text-[#e66414]">#{donation.id}</td>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <Building2 size={13} className="text-[#6b6b6b]" />
-                        <span>{donation.institucion_nombre ?? `ID ${donation.institucion_id}`}</span>
-                      </div>
-                    </td>
-                    <td className="text-[#a0a0a0]">{formatDate(donation.fecha)}</td>
-                    <td>
-                      {donation.tipo ? (
-                        <Badge variant="primary">{donation.tipo}</Badge>
-                      ) : (
-                        <span className="text-[#6b6b6b]">—</span>
-                      )}
-                    </td>
-                    <td>
-                      {donation.monto !== undefined ? (
-                        <span className="text-[#4ade80] font-semibold">
-                          S/ {donation.monto.toFixed(2)}
+                {donations.map((donation, idx) => {
+                  const institucion = apiField<string>(donation, 'institucion_donante');
+                  const material = apiField<string>(donation, 'material_recibido');
+                  const ejemplares = apiField<number>(donation, 'ejemplares_donados') ?? 0;
+                  const fecha = apiField<string>(donation, 'fechaDonacion', 'fechadonacion');
+                  const bibliotecario = apiField<string>(donation, 'bibliotecario_receptor');
+
+                  return (
+                    <tr
+                      key={`${institucion}-${material}-${fecha}-${idx}`}
+                      id={`donation-row-${idx}`}
+                    >
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <Building2 size={13} className="text-[#6b6b6b]" />
+                          <span>{institucion ?? '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <BookOpen size={13} className="text-[#6b6b6b]" />
+                          <span>{material ?? '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="font-semibold text-[#4ade80]">
+                          {ejemplares} ejemplar{ejemplares !== 1 ? 'es' : ''}
                         </span>
-                      ) : (
-                        <span className="text-[#6b6b6b]">—</span>
-                      )}
-                    </td>
-                    <td className="text-[#6b6b6b] text-xs">
-                      {donation.descripcion ? truncate(donation.descripcion, 50) : '—'}
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="text-[#a0a0a0]">
+                        {fecha ? formatDate(fecha) : '—'}
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-2 text-[#a0a0a0]">
+                          <User size={13} className="text-[#6b6b6b]" />
+                          <span>{bibliotecario ?? '—'}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

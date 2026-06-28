@@ -16,13 +16,16 @@ import {
   CheckCircle,
   Hash,
   Search,
+  XCircle,
 } from 'lucide-react';
 import { DEFAULT_PAGE_SIZE } from '@/constants';
+import { apiField } from '@/utils/apiField';
 
 type CopyTab = 'all' | 'available';
 
 /**
- * Página de copias con tabs: todas, disponibles y búsqueda por material.
+ * Página de copias (tabla Ejemplar):
+ *   material_id, numeroCopia, estadoConservacion, disponibilidad
  */
 export function CopiesPage() {
   const [activeTab, setActiveTab] = useState<CopyTab>('all');
@@ -71,13 +74,11 @@ export function CopiesPage() {
         subtitle="Gestión del inventario físico de la comicteca"
       />
 
-      {/* Stats rápidas */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Total Copias" value={allCopies?.length ?? '—'} icon={<Layers size={20} />} color="primary" />
         <StatCard label="Disponibles" value={availableCopies?.length ?? '—'} icon={<CheckCircle size={20} />} color="success" />
       </div>
 
-      {/* Búsquedas */}
       <div className="card p-5 mb-6">
         <h3 className="text-[#a0a0a0] text-xs font-semibold uppercase tracking-wider mb-4 flex items-center gap-2">
           <Search size={13} />
@@ -99,7 +100,6 @@ export function CopiesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       {!materialResults && (
         <div className="flex gap-1 p-1 bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl w-fit mb-6">
           {([
@@ -122,7 +122,6 @@ export function CopiesPage() {
         </div>
       )}
 
-      {/* Tabla */}
       {loading || searching ? (
         <Loader />
       ) : error ? (
@@ -135,35 +134,46 @@ export function CopiesPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>ID Copia</th>
-                  <th>ID Material</th>
-                  <th>Estado</th>
-                  <th>Disponible</th>
-                  <th>Notas</th>
+                  <th>Material ID</th>
+                  <th># Copia</th>
+                  <th>Estado conservación</th>
+                  <th>Disponibilidad</th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((copy) => (
-                  <tr key={copy.id} id={`copy-row-${copy.id}`}>
-                    <td className="font-mono text-[#e66414]">#{copy.id}</td>
-                    <td className="font-mono text-[#a0a0a0]">#{copy.material_id}</td>
-                    <td>
-                      {copy.estado ? (
-                        <Badge variant="neutral">{copy.estado}</Badge>
-                      ) : (
-                        <span className="text-[#6b6b6b]">—</span>
-                      )}
-                    </td>
-                    <td>
-                      {copy.disponible !== false ? (
-                        <Badge variant="success" dot>Disponible</Badge>
-                      ) : (
-                        <Badge variant="danger" dot>No disponible</Badge>
-                      )}
-                    </td>
-                    <td className="text-[#a0a0a0]">{copy.notas || '—'}</td>
-                  </tr>
-                ))}
+                {paginated.map((copy) => {
+                  const materialId = apiField<number>(copy, 'material_id') ?? 0;
+                  const numeroCopia = apiField<number>(copy, 'numeroCopia', 'numerocopia') ?? 0;
+                  const estado = apiField<string>(copy, 'estadoConservacion', 'estadoconservacion');
+                  const disponibilidad = apiField<string>(copy, 'disponibilidad');
+
+                  return (
+                    <tr key={`${materialId}-${numeroCopia}`} id={`copy-row-${materialId}-${numeroCopia}`}>
+                      <td className="font-mono text-[#a0a0a0]">#{materialId}</td>
+                      <td className="font-mono text-[#e66414]">#{numeroCopia}</td>
+                      <td>
+                        {estado ? (
+                          <Badge variant="neutral">{estado}</Badge>
+                        ) : (
+                          <span className="text-[#6b6b6b]">—</span>
+                        )}
+                      </td>
+                      <td>
+                        {disponibilidad === 'Disponible' ? (
+                          <span className="flex items-center gap-1.5 text-green-400 text-sm">
+                            <CheckCircle size={14} />
+                            Disponible
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 text-red-400 text-sm">
+                            <XCircle size={14} />
+                            {disponibilidad ?? 'No disponible'}
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

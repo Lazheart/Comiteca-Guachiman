@@ -11,14 +11,18 @@ import { Badge } from '@/components/Badge';
 import { Pagination } from '@/components/Pagination';
 import { SearchBar } from '@/components/SearchBar';
 import { StatCard } from '@/components/StatCard';
-import { ClipboardList, Clock, BookOpen, User } from 'lucide-react';
+import { ClipboardList, Clock, BookOpen, User, Copy } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
 import { DEFAULT_PAGE_SIZE } from '@/constants';
+import { apiField } from '@/utils/apiField';
 
 type ReservationTab = 'all' | 'pending';
 
 /**
  * Página de reservas con tabs (todas/pendientes) y búsqueda por DNI.
+ * Usa los campos reales de ReservaGestionada:
+ *   miembro_DNI, bibliotecario_DNI, material_id, numeroCopia, fechaReserva, estadoReserva
+ * PK compuesta: (miembro_DNI, material_id, numeroCopia) — no hay campo id.
  */
 export function ReservationsPage() {
   const [activeTab, setActiveTab] = useState<ReservationTab>('all');
@@ -135,42 +139,54 @@ export function ReservationsPage() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>#</th>
                   <th>Miembro DNI</th>
-                  <th>Material</th>
+                  <th>Bibliotecario DNI</th>
+                  <th>Material ID</th>
+                  <th>Copia</th>
                   <th>Fecha reserva</th>
-                  <th>Expiración</th>
                   <th>Estado</th>
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((res) => (
-                  <tr key={res.id} id={`reservation-row-${res.id}`}>
-                    <td className="font-mono text-[#e66414]">#{res.id}</td>
+                {paginated.map((res, idx) => {
+                  const miembroDni = apiField<number>(res, 'miembro_DNI', 'miembro_dni');
+                  const bibliotecarioDni = apiField<number>(res, 'bibliotecario_DNI', 'bibliotecario_dni');
+                  const materialId = apiField<number>(res, 'material_id');
+                  const numeroCopia = apiField<number>(res, 'numeroCopia', 'numerocopia');
+                  const fechaReserva = apiField<string>(res, 'fechaReserva', 'fechareserva');
+                  const estadoReserva = apiField<string>(res, 'estadoReserva', 'estadoreserva');
+
+                  return (
+                  <tr
+                    key={`${miembroDni}-${materialId}-${numeroCopia}-${idx}`}
+                    id={`reservation-row-${miembroDni}-${materialId}-${numeroCopia}`}
+                  >
                     <td>
                       <div className="flex items-center gap-1.5">
                         <User size={12} className="text-[#6b6b6b]" />
-                        {res.miembro_dni}
-                        {res.miembro_nombre && (
-                          <span className="text-[#6b6b6b] text-xs">({res.miembro_nombre})</span>
-                        )}
+                        {miembroDni}
+                      </div>
+                    </td>
+                    <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
+                    <td>
+                      <div className="flex items-center gap-1.5">
+                        <BookOpen size={12} className="text-[#6b6b6b]" />
+                        {materialId ?? '—'}
                       </div>
                     </td>
                     <td>
                       <div className="flex items-center gap-1.5">
-                        <BookOpen size={12} className="text-[#6b6b6b]" />
-                        {res.material_titulo ?? `ID ${res.material_id}`}
+                        <Copy size={12} className="text-[#6b6b6b]" />
+                        #{numeroCopia}
                       </div>
                     </td>
-                    <td className="text-[#a0a0a0]">{formatDate(res.fecha_reserva)}</td>
-                    <td className="text-[#a0a0a0]">
-                      {res.fecha_expiracion ? formatDate(res.fecha_expiracion) : '—'}
-                    </td>
+                    <td className="text-[#a0a0a0]">{fechaReserva ? formatDate(fechaReserva) : '—'}</td>
                     <td>
-                      <ReservationStatusBadge estado={res.estado} />
+                      <ReservationStatusBadge estadoReserva={estadoReserva} />
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -181,16 +197,17 @@ export function ReservationsPage() {
   );
 }
 
-function ReservationStatusBadge({ estado }: { estado?: string }) {
-  if (!estado) return <Badge variant="neutral">—</Badge>;
+function ReservationStatusBadge({ estadoReserva }: { estadoReserva?: string }) {
+  if (!estadoReserva) return <Badge variant="neutral">—</Badge>;
+  // Valores reales en DB: "Cancelada" | "Pendiente" | "Completada"
   const statusMap: Record<string, 'warning' | 'success' | 'neutral' | 'danger'> = {
     pendiente: 'warning',
     completada: 'success',
     cancelada: 'danger',
   };
   return (
-    <Badge variant={statusMap[estado.toLowerCase()] ?? 'neutral'} dot>
-      {estado}
+    <Badge variant={statusMap[estadoReserva.toLowerCase()] ?? 'neutral'} dot>
+      {estadoReserva}
     </Badge>
   );
 }

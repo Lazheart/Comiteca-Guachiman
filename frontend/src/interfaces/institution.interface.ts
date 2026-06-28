@@ -1,6 +1,8 @@
 /**
  * Interfaces para Instituciones
- * Basadas en las respuestas reales de la API.
+ * Alineadas con el schema real de la DB (tabla Institucion).
+ * Columnas reales: id, nombre, tipoInstitucion, direccion, telefono,
+ *                  correo, representante, estado
  */
 
 export interface Institution {
@@ -9,17 +11,20 @@ export interface Institution {
   /** Nombre de la institución */
   nombre: string;
   /** Tipo de institución */
-  tipo?: string;
-  /** Dirección */
+  tipoInstitucion?: string;
+  /** Dirección física */
   direccion?: string;
   /** Teléfono de contacto */
   telefono?: string;
-  /** Email de contacto */
-  email?: string;
-  /** Sitio web */
-  sitio_web?: string;
-  /** Total de donaciones realizadas */
+  /** Correo electrónico de contacto */
+  correo?: string;
+  /** Nombre del representante */
+  representante?: string;
+  /** Estado de la institución (ej. "Activa", "Inactiva") */
+  estado?: string;
+  /* Campos derivados calculados por el backend */
+  /** Total de donaciones realizadas (count desde Donacion) */
   total_donaciones?: number;
-  /** Eventos patrocinados */
+  /** Total de eventos patrocinados (count desde Patrocinado) */
   total_eventos_patrocinados?: number;
 }

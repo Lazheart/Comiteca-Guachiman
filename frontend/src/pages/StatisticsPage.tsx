@@ -34,6 +34,10 @@ import { CHART_COLORS } from '@/constants';
 
 /**
  * Dashboard de estadísticas con gráficos de Recharts.
+ * Usa los campos reales de la DB:
+ *  - EventAttendance.tema (no "nombre")
+ *  - Sanction: idSancion, miembro_DNI, motivo, fecha (no tipo_sancion / fecha_inicio / monto)
+ *  - OverdueLoan: id, miembro_DNI, fechaLimite (no prestamo_id / fecha_devolucion)
  */
 export function StatisticsPage() {
   const { data: mostLoaned, loading: lLoaned, error: eLoaned } = useApi(
@@ -115,12 +119,12 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 2. Disponibilidad de materiales */}
+        {/* 2. Disponibilidad de materiales (basado en Ejemplar.disponibilidad) */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 size={18} className="text-[#e66414]" />
             <h2 className="font-display font-bold text-[#f5f5f5]">
-              Disponibilidad de materiales
+              Disponibilidad de ejemplares
             </h2>
           </div>
           {lAvail ? (
@@ -129,39 +133,12 @@ export function StatisticsPage() {
             <ErrorMessage message={eAvail} />
           ) : !availability ? (
             <EmptyState title="Sin datos" description="No hay datos disponibles." />
-          ) : availability.por_genero && availability.por_genero.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart
-                data={availability.por_genero.map((g) => ({
-                  genero: truncate(g.genero, 12),
-                  total: g.total,
-                  disponibles: g.disponibles,
-                }))}
-                margin={{ top: 5, right: 10, left: -20, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#2e2e2e" />
-                <XAxis dataKey="genero" tick={{ fill: '#6b6b6b', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#6b6b6b', fontSize: 11 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: '#1a1a1a',
-                    border: '1px solid #2e2e2e',
-                    borderRadius: 8,
-                    color: '#f5f5f5',
-                    fontSize: 12,
-                  }}
-                />
-                <Legend wrapperStyle={{ fontSize: 12, color: '#a0a0a0' }} />
-                <Bar dataKey="total" fill="#2e2e2e" radius={[4, 4, 0, 0]} name="Total" />
-                <Bar dataKey="disponibles" fill="#e66414" radius={[4, 4, 0, 0]} name="Disponibles" />
-              </BarChart>
-            </ResponsiveContainer>
           ) : (
             <div className="grid grid-cols-3 gap-4 py-8">
               {[
-                { label: 'Total', value: availability.total_materiales, color: 'text-[#f5f5f5]' },
+                { label: 'Total ejemplares', value: availability.total_ejemplares, color: 'text-[#f5f5f5]' },
                 { label: 'Disponibles', value: availability.disponibles, color: 'text-[#4ade80]' },
-                { label: 'Prestados', value: availability.prestados, color: 'text-[#e66414]' },
+                { label: 'No disponibles', value: availability.no_disponibles, color: 'text-[#e66414]' },
               ].map((item) => (
                 <div key={item.label} className="text-center">
                   <p className={`font-display text-3xl font-black ${item.color}`}>
@@ -174,7 +151,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 3. Asistencia a eventos */}
+        {/* 3. Asistencia a eventos — usa "tema" (campo real de Evento) */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <Users size={18} className="text-[#e66414]" />
@@ -192,9 +169,9 @@ export function StatisticsPage() {
             <ResponsiveContainer width="100%" height={260}>
               <LineChart
                 data={attendance.slice(0, 10).map((e) => ({
-                  name: truncate(e.nombre, 15),
-                  asistentes: e.asistentes,
-                  capacidad: e.capacidad,
+                  /* "tema" es el campo real, no "nombre" */
+                  name: truncate(e.tema, 15),
+                  asistentes: e.total_asistentes,
                 }))}
                 margin={{ top: 5, right: 10, left: -20, bottom: 60 }}
               >
@@ -224,16 +201,6 @@ export function StatisticsPage() {
                   dot={{ fill: '#e66414', r: 4 }}
                   name="Asistentes"
                 />
-                {attendance[0]?.capacidad !== undefined && (
-                  <Line
-                    type="monotone"
-                    dataKey="capacidad"
-                    stroke="#2e2e2e"
-                    strokeWidth={2}
-                    strokeDasharray="5 5"
-                    name="Capacidad"
-                  />
-                )}
               </LineChart>
             </ResponsiveContainer>
           )}
@@ -258,8 +225,8 @@ export function StatisticsPage() {
               <PieChart>
                 <Pie
                   data={topDonors.slice(0, 6).map((d) => ({
-                    name: truncate(d.institucion_nombre, 20),
-                    value: d.total_donaciones,
+                    name: truncate(d.institucion_donante, 20),
+                    value: d.total_ejemplares,
                   }))}
                   cx="50%"
                   cy="50%"
@@ -293,7 +260,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 5. Préstamos vencidos */}
+        {/* 5. Préstamos vencidos — usa fechaLimite (campo real) */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <Clock size={18} className="text-[#f87171]" />
@@ -316,26 +283,26 @@ export function StatisticsPage() {
               <table className="data-table">
                 <thead>
                   <tr>
+                    <th>#</th>
                     <th>Material</th>
                     <th>Miembro</th>
-                    <th>Vencimiento</th>
-                    <th>Días vencido</th>
+                    <th>F. Límite</th>
+                    <th>Estado</th>
                   </tr>
                 </thead>
                 <tbody>
                   {overdueLoans.slice(0, 8).map((loan, idx) => (
-                    <tr key={loan.prestamo_id ?? idx} id={`overdue-${loan.prestamo_id ?? idx}`}>
-                      <td className="text-xs">{loan.material_titulo ?? '—'}</td>
-                      <td className="text-xs font-mono">{loan.miembro_dni ?? '—'}</td>
+                    <tr key={loan.id_prestamo ?? idx} id={`overdue-${loan.id_prestamo ?? idx}`}>
+                      <td className="font-mono text-[#e66414] text-xs">
+                        #{loan.id_prestamo}
+                      </td>
+                      <td className="text-xs">{loan.titulo_material ?? '—'}</td>
+                      <td className="text-xs">{loan.miembro_nombre ?? '—'}</td>
                       <td className="text-xs text-[#a0a0a0]">
-                        {loan.fecha_devolucion ? formatDate(loan.fecha_devolucion) : '—'}
+                        {loan.fechaLimite ? formatDate(String(loan.fechaLimite)) : '—'}
                       </td>
                       <td>
-                        {loan.dias_vencido !== undefined ? (
-                          <Badge variant="danger">{loan.dias_vencido}d</Badge>
-                        ) : (
-                          <span className="text-[#6b6b6b]">—</span>
-                        )}
+                        <Badge variant="danger">{loan.estado_tiempo_real}</Badge>
                       </td>
                     </tr>
                   ))}
@@ -345,7 +312,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 6. Sanciones */}
+        {/* 6. Sanciones — usa motivo y fecha (campos reales de tabla Sancion) */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <AlertTriangle size={18} className="text-[#facc15]" />
@@ -368,34 +335,20 @@ export function StatisticsPage() {
               <table className="data-table">
                 <thead>
                   <tr>
-                    <th>Miembro</th>
-                    <th>Tipo</th>
-                    <th>Inicio</th>
-                    <th>Monto</th>
+                    <th>Motivo</th>
+                    <th>Cantidad</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sanctions.slice(0, 8).map((sanction, idx) => (
-                    <tr key={idx}>
-                      <td className="font-mono text-xs">{sanction.miembro_dni ?? '—'}</td>
+                    <tr key={`${sanction.motivo}-${idx}`}>
                       <td>
-                        {sanction.tipo_sancion ? (
-                          <Badge variant="warning">{truncate(String(sanction.tipo_sancion), 20)}</Badge>
-                        ) : (
-                          <span className="text-[#6b6b6b]">—</span>
-                        )}
+                        <Badge variant="warning">
+                          {truncate(String(sanction.motivo), 40)}
+                        </Badge>
                       </td>
-                      <td className="text-xs text-[#a0a0a0]">
-                        {sanction.fecha_inicio ? formatDate(String(sanction.fecha_inicio)) : '—'}
-                      </td>
-                      <td>
-                        {sanction.monto !== undefined ? (
-                          <span className="text-[#facc15] font-semibold text-sm">
-                            S/ {Number(sanction.monto).toFixed(2)}
-                          </span>
-                        ) : (
-                          <span className="text-[#6b6b6b]">—</span>
-                        )}
+                      <td className="font-mono text-[#facc15] text-xs">
+                        {sanction.cantidad}
                       </td>
                     </tr>
                   ))}

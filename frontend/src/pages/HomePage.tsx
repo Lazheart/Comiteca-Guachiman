@@ -120,7 +120,8 @@ export function HomePage() {
             value={
               typeof availability?.disponibles === 'number'
                 ? availability.disponibles
-                : (materials?.filter((m) => m.disponible !== false).length ?? '—')
+                /* fallback: materiales con al menos 1 copia disponible */
+                : (materials?.filter((m) => (m.copias_disponibles ?? 0) > 0).length ?? '—')
             }
             icon={<CheckCircle size={22} />}
             color="success"
@@ -181,7 +182,8 @@ export function HomePage() {
                       {material.genero && (
                         <span className="badge badge-primary">{material.genero}</span>
                       )}
-                      {material.disponible !== false && (
+                      {/* disponibilidad real viene de Ejemplar.disponibilidad (derivado) */}
+                      {(material.copias_disponibles ?? 0) > 0 && (
                         <span className="badge badge-success" aria-label="Disponible">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
                           Disponible
@@ -222,7 +224,7 @@ export function HomePage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {previewEvents.map((event) => (
                 <article
-                  key={event.id ?? `event-${event.nombre || (event as any).tema || ''}-${event.fecha}`}
+                  key={event.id ?? `event-${event.tema || ''}-${event.fecha}`}
                   className="card p-5 cursor-pointer group"
                   onClick={() => navigate(`/eventos/${event.id}`)}
                   id={`event-card-${event.id}`}
@@ -235,13 +237,19 @@ export function HomePage() {
                       {formatDate(event.fecha)}
                     </span>
                   </div>
+                  {/* "tema" es el campo real en la tabla Evento (no "nombre") */}
                   <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight mb-1 group-hover:text-[#e66414] transition-colors">
-                    {truncate(event.nombre, 60)}
+                    {truncate(event.tema, 60)}
                   </h3>
-                  {event.lugar && (
+                  {event.horaInicio && (
                     <p className="text-[#6b6b6b] text-xs mt-2 flex items-center gap-1">
                       <Clock size={11} />
-                      {event.lugar}
+                      {event.horaInicio}{event.horaFin ? ` – ${event.horaFin}` : ''}
+                    </p>
+                  )}
+                  {event.numeroDePiso !== undefined && event.numeroDePiso !== null && (
+                    <p className="text-[#6b6b6b] text-xs mt-1">
+                      Piso {event.numeroDePiso}{event.idZona ? ` · Zona ${event.idZona}` : ''}
                     </p>
                   )}
                 </article>
@@ -272,9 +280,9 @@ export function HomePage() {
           <Loader />
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {previewInstitutions.map((inst) => (
+              {previewInstitutions.map((inst) => (
               <article
-                key={inst.id ?? `inst-${inst.nombre}-${inst.tipo || ''}`}
+                key={inst.id ?? `inst-${inst.nombre}-${inst.tipoInstitucion || ''}`}
                 className="card p-5 cursor-pointer group text-center"
                 onClick={() => navigate(`/instituciones/${inst.id}`)}
                 id={`institution-card-${inst.id}`}
@@ -285,8 +293,9 @@ export function HomePage() {
                 <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight group-hover:text-[#e66414] transition-colors">
                   {truncate(inst.nombre, 30)}
                 </h3>
-                {inst.tipo && (
-                  <p className="text-[#6b6b6b] text-xs mt-1">{inst.tipo}</p>
+                {/* tipoInstitucion es el campo real (no "tipo") */}
+                {inst.tipoInstitucion && (
+                  <p className="text-[#6b6b6b] text-xs mt-1">{inst.tipoInstitucion}</p>
                 )}
               </article>
             ))}
@@ -315,21 +324,17 @@ export function HomePage() {
             <div className="flex flex-col gap-3">
               {mostLoaned.slice(0, 5).map((item, idx) => (
                 <div
-                  key={item.material_id ?? `mostloaned-${item.titulo}`}
-                  className="flex items-center gap-4 p-4 card cursor-pointer group"
-                  onClick={() => navigate(`/materiales/${item.material_id}`)}
-                  id={`trending-card-${item.material_id}`}
+                  key={`mostloaned-${item.titulo}-${idx}`}
+                  className="flex items-center gap-4 p-4 card"
+                  id={`trending-card-${idx}`}
                 >
                   <span className="font-display text-2xl font-black text-[#2e2e2e] w-8 text-center shrink-0">
                     {idx + 1}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-[#f5f5f5] text-sm group-hover:text-[#e66414] transition-colors truncate">
+                    <p className="font-semibold text-[#f5f5f5] text-sm truncate">
                       {item.titulo}
                     </p>
-                    {item.autor && (
-                      <p className="text-[#6b6b6b] text-xs">{item.autor}</p>
-                    )}
                   </div>
                   <div className="flex items-center gap-1.5 text-[#e66414] shrink-0">
                     <TrendingUp size={13} />

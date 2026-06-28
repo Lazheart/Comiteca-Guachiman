@@ -1,7 +1,11 @@
 /**
- * Interfaces para Materiales (cómics, manga, novelas gráficas, etc.)
- * Basadas en las respuestas reales de la API.
- * Ajustar si el backend modifica los schemas.
+ * Interfaces para Materiales (Material, Ejemplar)
+ * Alineadas con el schema real de la DB.
+ *
+ * Tabla Material: id, titulo, autor, genero, ilustracion, editorial, fechaPublicacion, paisOrigen
+ * Subtipos: Comic (id, tipoComic, serializacion), Manga (id), Novela (id, narracion)
+ * Tabla Ejemplar: material_id, numeroCopia, estadoConservacion, disponibilidad
+ *   PK compuesta: (material_id, numeroCopia)
  */
 
 export interface Material {
@@ -13,42 +17,45 @@ export interface Material {
   autor: string;
   /** Género o categoría */
   genero: string;
-  /** País de origen */
-  pais?: string;
-  /** Año de publicación */
-  anio?: number;
+  /** Ilustrador */
+  ilustracion?: string;
   /** Editorial */
   editorial?: string;
-  /** Número de páginas */
-  num_paginas?: number;
-  /** Descripción o sinopsis */
-  descripcion?: string;
-  /** URL de portada/imagen */
-  imagen_url?: string;
-  /** Si el material está disponible para préstamo */
-  disponible?: boolean;
-  /** Total de copias */
+  /** Fecha de publicación (YYYY-MM-DD) */
+  fechaPublicacion?: string;
+  /** País de origen */
+  paisOrigen?: string;
+  /* Campos de subtipo (pueden venir si el endpoint hace JOIN) */
+  /** Solo Comic: tipo de cómic */
+  tipoComic?: string;
+  /** Solo Comic: tipo de serialización */
+  serializacion?: string;
+  /** Solo Novela: tipo de narración */
+  narracion?: string;
+  /* Campos derivados calculados por el backend */
+  /** Total de copias (count de Ejemplar por material_id) */
   total_copias?: number;
-  /** Copias disponibles */
+  /** Copias con disponibilidad = 'Disponible' */
   copias_disponibles?: number;
 }
 
+/**
+ * Ejemplar (copia física de un material)
+ * PK compuesta: (material_id, numeroCopia) — NO existe campo id autogenerado.
+ */
 export interface Copy {
-  /** ID de la copia */
-  id: number;
   /** ID del material al que pertenece */
   material_id: number;
-  /** Estado de la copia (bueno, regular, dañado) */
-  estado?: string;
-  /** Si la copia está disponible */
-  disponible?: boolean;
-  /** Notas adicionales */
-  notas?: string;
+  /** Número de copia (parte de la PK compuesta) */
+  numeroCopia: number;
+  /** Estado de conservación del ejemplar */
+  estadoConservacion?: string;
+  /** Disponibilidad del ejemplar (VARCHAR en DB: "Disponible" | "No Disponible") */
+  disponibilidad?: string;
 }
 
 export interface MaterialFilters {
   genre?: string;
   author?: string;
   country?: string;
-  available?: boolean;
 }
