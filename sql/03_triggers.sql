@@ -1,4 +1,4 @@
--- Enlazamiento de triggers con las tablas : ALTER TABLE Evento ADD COLUMN numeroDePiso INT, ADD COLUMN idZona VARCHAR(2)
+-- Enlazamiento de tri
 
 -- 1. Verificacion si el ejemplar ya fue prestado
 CREATE OR REPLACE FUNCTION fn_validar_prestamo_antes_insertar()

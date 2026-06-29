@@ -87,3 +87,46 @@ HAVING COUNT(DISTINCT s.idSancion) > 0 OR
        SUM(CASE WHEN p.fechaDevolucion > p.fechaLimite THEN 1 ELSE 0 END) > 0
 ORDER BY dias_retraso_acumulados DESC;
 
+
+--- 4. Análisis de Rentabilidad y Deserción en Eventos (El "ROI Wachiman")
+--- Evalúa el éxito de los eventos organizados por la Comicteca cruzando los fondos
+--- recibidos por patrocinios, la expectativa (inscritos) y la realidad (asistentes).
+--- Calcula la tasa de "No-Show" (deserción) para medir el verdadero impacto.
+WITH TotalInscritos AS (
+    SELECT 
+        evento_id, 
+        COUNT(miembro_DNI) AS inscritos
+    FROM Inscripcion
+    GROUP BY evento_id
+),
+TotalAsistentes AS (
+    SELECT 
+        evento_id, 
+        COUNT(visitante_DNI) AS asistentes
+    FROM Asistencia
+    GROUP BY evento_id
+),
+TotalPatrocinio AS (
+    SELECT 
+        evento_id, 
+        SUM(montoPatrocinio) AS presupuesto_total
+    FROM Patrocinado
+    GROUP BY evento_id
+)
+SELECT 
+    e.id AS evento_id,
+    e.tema,
+    e.fecha,
+    COALESCE(tp.presupuesto_total, 0.00) AS total_recaudado,
+    COALESCE(ti.inscritos, 0) AS total_inscritos,
+    COALESCE(ta.asistentes, 0) AS total_asistentes,
+    -- Calculamos el porcentaje de gente que se inscribió pero no fue
+    CASE 
+        WHEN COALESCE(ti.inscritos, 0) = 0 THEN 0
+        ELSE ROUND(((COALESCE(ti.inscritos, 0) - COALESCE(ta.asistentes, 0))::NUMERIC / ti.inscritos) * 100, 2)
+    END AS porcentaje_desercion
+FROM Evento e
+LEFT JOIN TotalInscritos ti ON e.id = ti.evento_id
+LEFT JOIN TotalAsistentes ta ON e.id = ta.evento_id
+LEFT JOIN TotalPatrocinio tp ON e.id = tp.evento_id
+ORDER BY porcentaje_desercion DESC, total_recaudado DESC;

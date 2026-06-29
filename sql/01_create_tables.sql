@@ -119,7 +119,7 @@ CREATE TABLE Evento (
     horaInicio TIME,
     horaFin TIME,
     numeroDePiso INT,
-    idZona VARCHAR(2)
+    idZona VARCHAR
 );
 
 CREATE TABLE Prestamo (
