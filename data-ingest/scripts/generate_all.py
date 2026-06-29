@@ -74,9 +74,12 @@ def main():
     
     dnis_disponibles = [p['DNI'] for p in df_personas]
     
-    # 2. Infraestructura
-    print("\n2. Generando Infraestructura...")
-    df_pisos, df_zonas, df_sala_estantes, df_sala_lectura, df_administracion, df_estantes = generate_infraestructura()
+    # 2. Infraestructura (escalada al volumen de materiales)
+    total_materiales = c_novelas + c_comics + c_mangas
+    print(f"\n2. Generando Infraestructura (para {total_materiales:,} materiales)...")
+    df_pisos, df_zonas, df_sala_estantes, df_sala_lectura, df_administracion, df_estantes = generate_infraestructura(
+        total_materiales=total_materiales
+    )
     save_csv(df_pisos, 'Piso')
     save_csv(df_zonas, 'Zona')
     save_csv(df_sala_estantes, 'SalaEstantes')
