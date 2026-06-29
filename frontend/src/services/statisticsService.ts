@@ -2,61 +2,42 @@ import type {
   MostLoanedMaterial,
   EventAttendance,
   MaterialAvailabilityRow,
-  MaterialAvailabilitySummary,
   TopDonor,
   SanctionStat,
   OverdueLoan,
+  PaginatedResponse,
+  PaginationParams
 } from '@/interfaces';
 import api from './api';
 
-function summarizeAvailability(rows: MaterialAvailabilityRow[]): MaterialAvailabilitySummary {
-  const total_ejemplares = rows.reduce((sum, row) => sum + Number(row.cantidad), 0);
-  const disponibles = rows
-    .filter((row) => row.disponibilidad === 'Disponible')
-    .reduce((sum, row) => sum + Number(row.cantidad), 0);
-
-  return {
-    total_ejemplares,
-    disponibles,
-    no_disponibles: total_ejemplares - disponibles,
-    por_disponibilidad: rows,
-  };
-}
-
-/** Servicio para consumir los endpoints de Estadísticas */
 export const statisticsService = {
-  async getMostLoanedMaterials(): Promise<MostLoanedMaterial[]> {
-    const { data } = await api.get<MostLoanedMaterial[]>('/statistics/most-loaned-materials');
+  async getMostLoanedMaterials(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<MostLoanedMaterial>> {
+    const { data } = await api.get<PaginatedResponse<MostLoanedMaterial>>('/statistics/most-loaned-materials', { params: pagination, signal });
     return data;
   },
 
-  async getEventsAttendance(): Promise<EventAttendance[]> {
-    const { data } = await api.get<EventAttendance[]>('/statistics/events-attendance');
+  async getEventsAttendance(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<EventAttendance>> {
+    const { data } = await api.get<PaginatedResponse<EventAttendance>>('/statistics/events-attendance', { params: pagination, signal });
     return data;
   },
 
-  async getMaterialAvailability(): Promise<MaterialAvailabilitySummary> {
-    const { data } = await api.get<MaterialAvailabilityRow[]>('/statistics/material-availability');
-    return summarizeAvailability(data);
-  },
-
-  async getMaterialAvailabilityRows(): Promise<MaterialAvailabilityRow[]> {
-    const { data } = await api.get<MaterialAvailabilityRow[]>('/statistics/material-availability');
+  async getMaterialAvailability(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<MaterialAvailabilityRow>> {
+    const { data } = await api.get<PaginatedResponse<MaterialAvailabilityRow>>('/statistics/material-availability', { params: pagination, signal });
     return data;
   },
 
-  async getTopDonors(): Promise<TopDonor[]> {
-    const { data } = await api.get<TopDonor[]>('/statistics/top-donors');
+  async getTopDonors(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<TopDonor>> {
+    const { data } = await api.get<PaginatedResponse<TopDonor>>('/statistics/top-donors', { params: pagination, signal });
     return data;
   },
 
-  async getSanctions(): Promise<SanctionStat[]> {
-    const { data } = await api.get<SanctionStat[]>('/statistics/sanctions');
+  async getSanctions(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<SanctionStat>> {
+    const { data } = await api.get<PaginatedResponse<SanctionStat>>('/statistics/sanctions', { params: pagination, signal });
     return data;
   },
 
-  async getOverdueLoans(): Promise<OverdueLoan[]> {
-    const { data } = await api.get<OverdueLoan[]>('/statistics/overdue-loans');
+  async getOverdueLoans(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<OverdueLoan>> {
+    const { data } = await api.get<PaginatedResponse<OverdueLoan>>('/statistics/overdue-loans', { params: pagination, signal });
     return data;
   },
 };

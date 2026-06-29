@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useApi } from '@/hooks/useApi';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { reservationService } from '@/services/reservationService';
-import type { Reservation } from '@/interfaces';
+import type { Reservation, PaginationParams } from '@/interfaces';
 import { Loader } from '@/components/Loader';
 import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
@@ -13,77 +12,64 @@ import { SearchBar } from '@/components/SearchBar';
 import { StatCard } from '@/components/StatCard';
 import { ClipboardList, Clock, BookOpen, User, Copy } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
-import { DEFAULT_PAGE_SIZE } from '@/constants';
 import { apiField } from '@/utils/apiField';
+import { useApi } from '@/hooks/useApi';
 
 type ReservationTab = 'all' | 'pending';
 
 /**
- * Página de reservas con tabs (todas/pendientes) y búsqueda por DNI.
- * Usa los campos reales de ReservaGestionada:
- *   miembro_DNI, bibliotecario_DNI, material_id, numeroCopia, fechaReserva, estadoReserva
- * PK compuesta: (miembro_DNI, material_id, numeroCopia) — no hay campo id.
+ * Página de reservas con tabs y búsqueda por DNI. Paginación server-side.
  */
 export function ReservationsPage() {
   const [activeTab, setActiveTab] = useState<ReservationTab>('all');
-  const [dniResults, setDniResults] = useState<Reservation[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [dniMode, setDniMode] = useState(false);
+  const [dniValue, setDniValue] = useState<number | null>(null);
 
-  const { data: allReservations, loading: lAll, error: eAll, refetch: rAll } = useApi(
-    () => reservationService.getAll(),
-    [],
+  // Stats counts
+  const { data: allStats } = useApi(() => reservationService.getAll({ page: 1, page_size: 1 }), []);
+  const { data: pendingStats } = useApi(() => reservationService.getPending({ page: 1, page_size: 1 }), []);
+
+  const fetcher = useCallback(
+    (pagination: PaginationParams, signal: AbortSignal) => {
+      if (dniMode && dniValue !== null) return reservationService.getByMember(dniValue, pagination, signal);
+      if (activeTab === 'pending') return reservationService.getPending(pagination, signal);
+      return reservationService.getAll(pagination, signal);
+    },
+    [activeTab, dniMode, dniValue],
   );
-  const { data: pending, loading: lPending, error: ePending, refetch: rPending } = useApi(
-    () => reservationService.getPending(),
-    [],
-  );
 
-  const base = activeTab === 'pending' ? pending : allReservations;
-  const displayList = dniResults ?? base ?? [];
-  const loading = activeTab === 'pending' ? lPending : lAll;
-  const error = activeTab === 'pending' ? ePending : eAll;
-  const refetch = activeTab === 'pending' ? rPending : rAll;
+  const { items, loading, error, currentPage, totalPages, totalItems, setPage, refetch } =
+    useServerPagination<Reservation>({ fetcher, initialPageSize: 20, deps: [fetcher] });
 
-  const { currentPage, totalPages, offset, limit, setPage } = usePagination({
-    totalItems: displayList.length,
-    itemsPerPage: DEFAULT_PAGE_SIZE,
-  });
-  const paginated = displayList.slice(offset, offset + limit);
-
-  const handleSearchDni = useCallback(async (query: string) => {
+  const handleSearchDni = (query: string) => {
     const dni = parseInt(query);
     if (isNaN(dni)) return;
-    setSearching(true);
-    try {
-      const results = await reservationService.getByMember(dni);
-      setDniResults(results);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    setDniValue(dni);
+    setDniMode(true);
+    setPage(1);
+  };
 
   const clearSearch = () => {
-    setDniResults(null);
+    setDniMode(false);
+    setDniValue(null);
+    setPage(1);
   };
 
   return (
     <div className="section-container py-10">
-      <SectionTitle
-        title="Reservas"
-        subtitle="Gestión de reservas de materiales"
-      />
+      <SectionTitle title="Reservas" subtitle="Gestión de reservas de materiales" />
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 mb-8">
         <StatCard
           label="Total reservas"
-          value={allReservations?.length ?? '—'}
+          value={allStats?.total_items ?? '—'}
           icon={<ClipboardList size={20} />}
           color="primary"
         />
         <StatCard
           label="Pendientes"
-          value={pending?.length ?? '—'}
+          value={pendingStats?.total_items ?? '—'}
           icon={<Clock size={20} />}
           color="warning"
         />
@@ -104,7 +90,7 @@ export function ReservationsPage() {
       </div>
 
       {/* Tabs */}
-      {!dniResults && (
+      {!dniMode && (
         <div className="flex gap-1 p-1 bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl w-fit mb-6">
           {([
             { key: 'all', label: 'Todas' },
@@ -127,14 +113,15 @@ export function ReservationsPage() {
       )}
 
       {/* Contenido */}
-      {loading || searching ? (
+      {loading ? (
         <Loader />
       ) : error ? (
         <ErrorMessage message={error} onRetry={refetch} />
-      ) : paginated.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState title="Sin reservas" description="No hay reservas para mostrar." />
       ) : (
         <>
+          <p className="text-xs text-[#6b6b6b] mb-3">{totalItems.toLocaleString()} reservas en total</p>
           <div className="card overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -148,7 +135,7 @@ export function ReservationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((res, idx) => {
+                {items.map((res, idx) => {
                   const miembroDni = apiField<number>(res, 'miembro_DNI', 'miembro_dni');
                   const bibliotecarioDni = apiField<number>(res, 'bibliotecario_DNI', 'bibliotecario_dni');
                   const materialId = apiField<number>(res, 'material_id');
@@ -157,34 +144,34 @@ export function ReservationsPage() {
                   const estadoReserva = apiField<string>(res, 'estadoReserva', 'estadoreserva');
 
                   return (
-                  <tr
-                    key={`${miembroDni}-${materialId}-${numeroCopia}-${idx}`}
-                    id={`reservation-row-${miembroDni}-${materialId}-${numeroCopia}`}
-                  >
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <User size={12} className="text-[#6b6b6b]" />
-                        {miembroDni}
-                      </div>
-                    </td>
-                    <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <BookOpen size={12} className="text-[#6b6b6b]" />
-                        {materialId ?? '—'}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <Copy size={12} className="text-[#6b6b6b]" />
-                        #{numeroCopia}
-                      </div>
-                    </td>
-                    <td className="text-[#a0a0a0]">{fechaReserva ? formatDate(fechaReserva) : '—'}</td>
-                    <td>
-                      <ReservationStatusBadge estadoReserva={estadoReserva} />
-                    </td>
-                  </tr>
+                    <tr
+                      key={`${miembroDni}-${materialId}-${numeroCopia}-${idx}`}
+                      id={`reservation-row-${miembroDni}-${materialId}-${numeroCopia}`}
+                    >
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <User size={12} className="text-[#6b6b6b]" />
+                          {miembroDni}
+                        </div>
+                      </td>
+                      <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen size={12} className="text-[#6b6b6b]" />
+                          {materialId ?? '—'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <Copy size={12} className="text-[#6b6b6b]" />
+                          #{numeroCopia}
+                        </div>
+                      </td>
+                      <td className="text-[#a0a0a0]">{fechaReserva ? formatDate(fechaReserva) : '—'}</td>
+                      <td>
+                        <ReservationStatusBadge estadoReserva={estadoReserva} />
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -199,7 +186,6 @@ export function ReservationsPage() {
 
 function ReservationStatusBadge({ estadoReserva }: { estadoReserva?: string }) {
   if (!estadoReserva) return <Badge variant="neutral">—</Badge>;
-  // Valores reales en DB: "Cancelada" | "Pendiente" | "Completada"
   const statusMap: Record<string, 'warning' | 'success' | 'neutral' | 'danger'> = {
     pendiente: 'warning',
     completada: 'success',

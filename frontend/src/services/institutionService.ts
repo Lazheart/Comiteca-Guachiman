@@ -1,27 +1,24 @@
-import type { Institution, DonationRecord, SponsoredEvent } from '@/interfaces';
+import type { Institution, Donation, SponsoredEvent, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Instituciones */
 export const institutionService = {
-  async getAll(): Promise<Institution[]> {
-    const { data } = await api.get<Institution[]>('/institutions');
+  async getAll(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Institution>> {
+    const { data } = await api.get<PaginatedResponse<Institution>>('/institutions', { params: pagination, signal });
     return data;
   },
 
-  async getById(id: number): Promise<Institution> {
-    const { data } = await api.get<Institution>(`/institutions/${id}`);
+  async getById(id: number, signal?: AbortSignal): Promise<Institution> {
+    const { data } = await api.get<Institution>(`/institutions/${id}`, { signal });
     return data;
   },
 
-  /** GET /institutions/{id}/donations — tabla Donacion */
-  async getDonations(id: number): Promise<DonationRecord[]> {
-    const { data } = await api.get<DonationRecord[]>(`/institutions/${id}/donations`);
+  async getDonations(institutionId: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Donation>> {
+    const { data } = await api.get<PaginatedResponse<Donation>>(`/institutions/${institutionId}/donations`, { params: pagination, signal });
     return data;
   },
 
-  /** GET /institutions/{id}/sponsored-events — Evento + montoPatrocinio */
-  async getSponsoredEvents(id: number): Promise<SponsoredEvent[]> {
-    const { data } = await api.get<SponsoredEvent[]>(`/institutions/${id}/sponsored-events`);
+  async getSponsoredEvents(institutionId: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<SponsoredEvent>> {
+    const { data } = await api.get<PaginatedResponse<SponsoredEvent>>(`/institutions/${institutionId}/sponsored-events`, { params: pagination, signal });
     return data;
   },
 };

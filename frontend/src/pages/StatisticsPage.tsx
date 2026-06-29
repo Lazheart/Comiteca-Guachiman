@@ -34,36 +34,47 @@ import { CHART_COLORS } from '@/constants';
 
 /**
  * Dashboard de estadísticas con gráficos de Recharts.
- * Usa los campos reales de la DB:
- *  - EventAttendance.tema (no "nombre")
- *  - Sanction: idSancion, miembro_DNI, motivo, fecha (no tipo_sancion / fecha_inicio / monto)
- *  - OverdueLoan: id, miembro_DNI, fechaLimite (no prestamo_id / fecha_devolucion)
+ * Todas las consultas usan SQL agregado en el servidor, nunca se descarga la tabla completa.
  */
 export function StatisticsPage() {
-  const { data: mostLoaned, loading: lLoaned, error: eLoaned } = useApi(
-    () => statisticsService.getMostLoanedMaterials(),
+  // page_size pequeño = sólo top N; el servidor hace el ORDER BY y LIMIT
+  const { data: mostLoanedResp, loading: lLoaned, error: eLoaned } = useApi(
+    () => statisticsService.getMostLoanedMaterials({ page: 1, page_size: 10 }),
     [],
   );
-  const { data: attendance, loading: lAttend, error: eAttend } = useApi(
-    () => statisticsService.getEventsAttendance(),
+  const { data: attendanceResp, loading: lAttend, error: eAttend } = useApi(
+    () => statisticsService.getEventsAttendance({ page: 1, page_size: 10 }),
     [],
   );
-  const { data: availability, loading: lAvail, error: eAvail } = useApi(
-    () => statisticsService.getMaterialAvailability(),
+  const { data: availabilityResp, loading: lAvail, error: eAvail } = useApi(
+    () => statisticsService.getMaterialAvailability({ page: 1, page_size: 50 }),
     [],
   );
-  const { data: topDonors, loading: lDonors, error: eDonors } = useApi(
-    () => statisticsService.getTopDonors(),
+  const { data: topDonorsResp, loading: lDonors, error: eDonors } = useApi(
+    () => statisticsService.getTopDonors({ page: 1, page_size: 6 }),
     [],
   );
-  const { data: sanctions, loading: lSanctions, error: eSanctions } = useApi(
-    () => statisticsService.getSanctions(),
+  const { data: sanctionsResp, loading: lSanctions, error: eSanctions } = useApi(
+    () => statisticsService.getSanctions({ page: 1, page_size: 10 }),
     [],
   );
-  const { data: overdueLoans, loading: lOverdue, error: eOverdue } = useApi(
-    () => statisticsService.getOverdueLoans(),
+  const { data: overdueResp, loading: lOverdue, error: eOverdue } = useApi(
+    () => statisticsService.getOverdueLoans({ page: 1, page_size: 10 }),
     [],
   );
+
+  // Extraer items de las respuestas paginadas
+  const mostLoaned = mostLoanedResp?.items ?? [];
+  const attendance = attendanceResp?.items ?? [];
+  const availabilityItems = availabilityResp?.items ?? [];
+  const topDonors = topDonorsResp?.items ?? [];
+  const sanctions = sanctionsResp?.items ?? [];
+  const overdueLoans = overdueResp?.items ?? [];
+
+  // Disponibilidad: agrupar por disponibilidad
+  const disponibles = availabilityItems.filter((r) => r.disponibilidad === 'Disponible').reduce((s, r) => s + Number(r.cantidad), 0);
+  const noDisponibles = availabilityItems.filter((r) => r.disponibilidad !== 'Disponible').reduce((s, r) => s + Number(r.cantidad), 0);
+  const totalEjemplares = disponibles + noDisponibles;
 
   return (
     <div className="section-container py-10">
@@ -85,12 +96,12 @@ export function StatisticsPage() {
             <Loader />
           ) : eLoaned ? (
             <ErrorMessage message={eLoaned} />
-          ) : !mostLoaned || mostLoaned.length === 0 ? (
+          ) : mostLoaned.length === 0 ? (
             <EmptyState title="Sin datos" description="No hay datos disponibles." />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <BarChart
-                data={mostLoaned.slice(0, 8).map((m) => ({
+                data={mostLoaned.map((m) => ({
                   name: truncate(m.titulo, 18),
                   prestamos: m.total_prestamos,
                 }))}
@@ -119,7 +130,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 2. Disponibilidad de materiales (basado en Ejemplar.disponibilidad) */}
+        {/* 2. Disponibilidad de materiales */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <BarChart3 size={18} className="text-[#e66414]" />
@@ -131,14 +142,14 @@ export function StatisticsPage() {
             <Loader />
           ) : eAvail ? (
             <ErrorMessage message={eAvail} />
-          ) : !availability ? (
+          ) : availabilityItems.length === 0 ? (
             <EmptyState title="Sin datos" description="No hay datos disponibles." />
           ) : (
             <div className="grid grid-cols-3 gap-4 py-8">
               {[
-                { label: 'Total ejemplares', value: availability.total_ejemplares, color: 'text-[#f5f5f5]' },
-                { label: 'Disponibles', value: availability.disponibles, color: 'text-[#4ade80]' },
-                { label: 'No disponibles', value: availability.no_disponibles, color: 'text-[#e66414]' },
+                { label: 'Total ejemplares', value: totalEjemplares, color: 'text-[#f5f5f5]' },
+                { label: 'Disponibles', value: disponibles, color: 'text-[#4ade80]' },
+                { label: 'No disponibles', value: noDisponibles, color: 'text-[#e66414]' },
               ].map((item) => (
                 <div key={item.label} className="text-center">
                   <p className={`font-display text-3xl font-black ${item.color}`}>
@@ -151,7 +162,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 3. Asistencia a eventos — usa "tema" (campo real de Evento) */}
+        {/* 3. Asistencia a eventos */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <Users size={18} className="text-[#e66414]" />
@@ -163,13 +174,12 @@ export function StatisticsPage() {
             <Loader />
           ) : eAttend ? (
             <ErrorMessage message={eAttend} />
-          ) : !attendance || attendance.length === 0 ? (
+          ) : attendance.length === 0 ? (
             <EmptyState title="Sin datos" description="No hay datos de asistencia." />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <LineChart
-                data={attendance.slice(0, 10).map((e) => ({
-                  /* "tema" es el campo real, no "nombre" */
+                data={attendance.map((e) => ({
                   name: truncate(e.tema, 15),
                   asistentes: e.total_asistentes,
                 }))}
@@ -218,13 +228,13 @@ export function StatisticsPage() {
             <Loader />
           ) : eDonors ? (
             <ErrorMessage message={eDonors} />
-          ) : !topDonors || topDonors.length === 0 ? (
+          ) : topDonors.length === 0 ? (
             <EmptyState title="Sin datos" description="No hay datos de donantes." />
           ) : (
             <ResponsiveContainer width="100%" height={260}>
               <PieChart>
                 <Pie
-                  data={topDonors.slice(0, 6).map((d) => ({
+                  data={topDonors.map((d) => ({
                     name: truncate(d.institucion_donante, 20),
                     value: d.total_ejemplares,
                   }))}
@@ -235,7 +245,7 @@ export function StatisticsPage() {
                   paddingAngle={3}
                   dataKey="value"
                 >
-                  {topDonors.slice(0, 6).map((_, idx) => (
+                  {topDonors.map((_, idx) => (
                     <Cell
                       key={`cell-${idx}`}
                       fill={CHART_COLORS[idx % CHART_COLORS.length]}
@@ -262,7 +272,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 5. Préstamos vencidos — usa fechaLimite (campo real) */}
+        {/* 5. Préstamos vencidos */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <Clock size={18} className="text-[#f87171]" />
@@ -274,7 +284,7 @@ export function StatisticsPage() {
             <Loader />
           ) : eOverdue ? (
             <ErrorMessage message={eOverdue} />
-          ) : !overdueLoans || overdueLoans.length === 0 ? (
+          ) : overdueLoans.length === 0 ? (
             <EmptyState
               title="Sin vencidos"
               description="No hay préstamos vencidos."
@@ -293,7 +303,7 @@ export function StatisticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {overdueLoans.slice(0, 8).map((loan, idx) => (
+                  {overdueLoans.map((loan, idx) => (
                     <tr key={loan.id_prestamo ?? idx} id={`overdue-${loan.id_prestamo ?? idx}`}>
                       <td className="font-mono text-[#e66414] text-xs">
                         #{loan.id_prestamo}
@@ -314,7 +324,7 @@ export function StatisticsPage() {
           )}
         </div>
 
-        {/* 6. Sanciones — usa motivo y fecha (campos reales de tabla Sancion) */}
+        {/* 6. Sanciones */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-5">
             <AlertTriangle size={18} className="text-[#facc15]" />
@@ -326,7 +336,7 @@ export function StatisticsPage() {
             <Loader />
           ) : eSanctions ? (
             <ErrorMessage message={eSanctions} />
-          ) : !sanctions || sanctions.length === 0 ? (
+          ) : sanctions.length === 0 ? (
             <EmptyState
               title="Sin sanciones"
               description="No hay sanciones registradas."
@@ -342,7 +352,7 @@ export function StatisticsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {sanctions.slice(0, 8).map((sanction, idx) => (
+                  {sanctions.map((sanction, idx) => (
                     <tr key={`${sanction.motivo}-${idx}`}>
                       <td>
                         <Badge variant="warning">

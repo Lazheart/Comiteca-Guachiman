@@ -34,9 +34,10 @@ export function MaterialDetailPage() {
   } = useApi(() => materialService.getById(materialId), [materialId]);
 
   const {
-    data: copies,
+    data: copiesResp,
     loading: loadingCopies,
-  } = useApi(() => materialService.getCopies(materialId), [materialId]);
+  } = useApi(() => materialService.getCopies(materialId, { page: 1, page_size: 100 }), [materialId]);
+  const copies = copiesResp?.items ?? null;
 
   if (loading) return <Loader />;
   if (error || !material)

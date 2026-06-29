@@ -1,4 +1,5 @@
 /** Re-exportación centralizada de todas las interfaces */
+export type { PaginatedResponse, PaginationParams } from './pagination.interface';
 export type { Material, Copy, MaterialFilters } from './material.interface';
 export type { Event, SponsoredEvent, EventFilters } from './event.interface';
 export type { Institution } from './institution.interface';

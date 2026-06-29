@@ -1,29 +1,19 @@
-import type { Reservation } from '@/interfaces';
+import type { Reservation, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Reservas */
 export const reservationService = {
-  /**
-   * Obtiene todas las reservas.
-   */
-  async getAll(): Promise<Reservation[]> {
-    const { data } = await api.get<Reservation[]>('/reservations');
+  async getAll(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Reservation>> {
+    const { data } = await api.get<PaginatedResponse<Reservation>>('/reservations', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene las reservas pendientes.
-   */
-  async getPending(): Promise<Reservation[]> {
-    const { data } = await api.get<Reservation[]>('/reservations/pending');
+  async getPending(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Reservation>> {
+    const { data } = await api.get<PaginatedResponse<Reservation>>('/reservations/pending', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene las reservas de un miembro por DNI.
-   */
-  async getByMember(dni: number): Promise<Reservation[]> {
-    const { data } = await api.get<Reservation[]>(`/reservations/member/${dni}`);
+  async getByMember(dni: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Reservation>> {
+    const { data } = await api.get<PaginatedResponse<Reservation>>(`/reservations/member/${dni}`, { params: pagination, signal });
     return data;
   },
 };

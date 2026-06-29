@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useApi } from '@/hooks/useApi';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
+import { useDebounce } from '@/hooks/useDebounce';
 import { materialService } from '@/services/materialService';
-import type { Material, MaterialFilters } from '@/interfaces';
+import type { Material, MaterialFilters, PaginationParams } from '@/interfaces';
 import { Loader } from '@/components/Loader';
 import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
@@ -13,10 +13,11 @@ import { Pagination } from '@/components/Pagination';
 import { SectionTitle } from '@/components/SectionTitle';
 import { BookOpen, Filter, X, ChevronRight } from 'lucide-react';
 import { truncate } from '@/utils/formatText';
-import { DEFAULT_PAGE_SIZE, GENRES, COUNTRIES } from '@/constants';
+import { GENRES, COUNTRIES } from '@/constants';
 
 /**
- * Página de catálogo de materiales con búsqueda, filtros y paginación.
+ * Página de catálogo de materiales con búsqueda, filtros y paginación server-side.
+ * Toda búsqueda, filtrado y paginación ocurre en el servidor.
  */
 export function MaterialsPage() {
   const navigate = useNavigate();
@@ -26,90 +27,62 @@ export function MaterialsPage() {
     genre: searchParams.get('genre') ?? undefined,
     author: searchParams.get('author') ?? undefined,
     country: searchParams.get('country') ?? undefined,
-    // "available" no existe como campo en Material; se filtra en el backend por Ejemplar.disponibilidad
   });
-  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') ?? '');
-  const [searchResults, setSearchResults] = useState<Material[] | null>(null);
-  const [searchLoading, setSearchLoading] = useState(false);
+  const [rawSearch, setRawSearch] = useState(searchParams.get('q') ?? '');
   const [showFilters, setShowFilters] = useState(false);
 
-  const { data: allMaterials, loading, error, refetch } = useApi(
-    () => materialService.getAll(filters),
-    [filters],
-  );
+  // Debounce: espera 400ms antes de lanzar la petición
+  const debouncedSearch = useDebounce(rawSearch, 400);
 
-  const displayedList = searchResults ?? allMaterials ?? [];
-  const { currentPage, totalPages, offset, limit, setPage } = usePagination({
-    totalItems: displayedList.length,
-    itemsPerPage: DEFAULT_PAGE_SIZE,
+  const {
+    items,
+    loading,
+    error,
+    currentPage,
+    totalPages,
+    totalItems,
+    setPage,
+    refetch,
+  } = useServerPagination<Material>({
+    fetcher: (pagination: PaginationParams, signal) =>
+      materialService.getAll(filters, { ...pagination, search: debouncedSearch || undefined }, signal),
+    initialPageSize: 20,
+    deps: [filters, debouncedSearch],
   });
-  const paginated = displayedList.slice(offset, offset + limit);
-
-  // Búsqueda por query string en la URL
-  useEffect(() => {
-    const q = searchParams.get('q');
-    if (q) {
-      setSearchQuery(q);
-      performSearch(q);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const performSearch = useCallback(async (q: string) => {
-    if (!q.trim()) {
-      setSearchResults(null);
-      return;
-    }
-    setSearchLoading(true);
-    try {
-      const results = await materialService.search(q);
-      setSearchResults(results);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, []);
 
   const handleSearch = (q: string) => {
-    setSearchQuery(q);
-    if (q) {
-      setSearchParams({ q });
-      performSearch(q);
-    } else {
-      setSearchResults(null);
-      setSearchParams({});
-    }
+    setRawSearch(q);
+    if (q) setSearchParams({ q });
+    else setSearchParams({});
     setPage(1);
   };
 
-  const handleFilterChange = (key: keyof MaterialFilters, value: string | boolean | undefined) => {
+  const handleFilterChange = (key: keyof MaterialFilters, value: string | undefined) => {
     setFilters((prev) => ({ ...prev, [key]: value || undefined }));
-    setSearchResults(null);
     setPage(1);
   };
 
   const clearFilters = () => {
     setFilters({});
-    setSearchResults(null);
-    setSearchQuery('');
+    setRawSearch('');
     setSearchParams({});
     setPage(1);
   };
 
-  const hasActiveFilters =
-    !!filters.genre || !!filters.author || !!filters.country;
+  const hasActiveFilters = !!filters.genre || !!filters.author || !!filters.country;
 
   return (
     <div className="section-container py-10">
       <SectionTitle
         title="Materiales"
-        subtitle={`${displayedList.length} materiales en la colección`}
+        subtitle={loading ? 'Cargando...' : `${totalItems.toLocaleString()} materiales en la colección`}
       />
 
       {/* Barra de búsqueda y filtros */}
       <div className="flex flex-col sm:flex-row gap-3 mb-6">
         <SearchBar
-          placeholder="Buscar por título, autor, género..."
-          defaultValue={searchQuery}
+          placeholder="Buscar por título, autor..."
+          defaultValue={rawSearch}
           onSearch={handleSearch}
           onClear={() => handleSearch('')}
           className="flex-1"
@@ -121,11 +94,9 @@ export function MaterialsPage() {
         >
           <Filter size={15} />
           Filtros
-          {hasActiveFilters && (
-            <span className="w-2 h-2 rounded-full bg-[#e66414]" />
-          )}
+          {hasActiveFilters && <span className="w-2 h-2 rounded-full bg-[#e66414]" />}
         </button>
-        {(hasActiveFilters || searchQuery) && (
+        {(hasActiveFilters || rawSearch) && (
           <button onClick={clearFilters} className="btn-ghost text-sm" id="clear-filters-btn">
             <X size={14} />
             Limpiar
@@ -135,7 +106,7 @@ export function MaterialsPage() {
 
       {/* Panel de filtros */}
       {showFilters && (
-        <div className="card p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="card p-5 mb-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-xs text-[#a0a0a0] font-medium mb-1.5" htmlFor="filter-genre">
               Género
@@ -181,17 +152,15 @@ export function MaterialsPage() {
               ))}
             </select>
           </div>
-          {/* Filtro de disponibilidad eliminado: la disponibilidad está en Ejemplar,
-              no en Material. Ver copias en la página de detalle. */}
         </div>
       )}
 
       {/* Resultados */}
-      {loading || searchLoading ? (
+      {loading ? (
         <Loader />
       ) : error ? (
         <ErrorMessage message={error} onRetry={refetch} />
-      ) : paginated.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
           title="Sin resultados"
           description="No se encontraron materiales con los filtros aplicados."
@@ -204,7 +173,7 @@ export function MaterialsPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {paginated.map((material) => (
+            {items.map((material) => (
               <MaterialCard
                 key={material.id}
                 material={material}
@@ -249,7 +218,6 @@ function MaterialCard({
           {material.genero && (
             <Badge variant="primary">{truncate(material.genero, 15)}</Badge>
           )}
-          {/* paisOrigen es el campo real de Material (no "pais") */}
           {material.paisOrigen && (
             <Badge variant="neutral">{material.paisOrigen}</Badge>
           )}
