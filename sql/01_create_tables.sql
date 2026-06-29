@@ -3,7 +3,7 @@ CREATE TABLE Persona (
     nombre VARCHAR(20),
     apellido VARCHAR(20),
     telefono VARCHAR(9),
-    correo VARCHAR(40),
+    correo VARCHAR(40)
 );
 
 CREATE TABLE Miembro (DNI INTEGER);
@@ -21,7 +21,7 @@ CREATE TABLE Institucion (
     tipoInstitucion VARCHAR(50),
     direccion VARCHAR(200),
     telefono VARCHAR(9),
-    correo VARCHAR(50),,
+    correo VARCHAR(50),
     representante VARCHAR(20),
     estado VARCHAR(10)
 );
@@ -118,8 +118,8 @@ CREATE TABLE Evento (
     fecha DATE,
     horaInicio TIME,
     horaFin TIME,
-	numeroDePiso INTEGER,
-	idZona VARCHAR
+    numeroDePiso INT,
+    idZona VARCHAR
 );
 
 CREATE TABLE Prestamo (

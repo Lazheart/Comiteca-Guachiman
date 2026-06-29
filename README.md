@@ -85,6 +85,16 @@ El archivo `06_seed_data.sql` contiene un conjunto reducido de datos cuidadosame
 
 Estos datos son independientes de los conjuntos masivos generados mediante los scripts de ingesta.
 
+## Generación de datos masivos
+
+Puede utilizar el script `create_data.sh` para generar datos masivos y cargarlos en la base de datos.
+
+```bash
+./create_data.sh [size]
+```
+
+Donde `size` puede ser '1k', '10k', '100k' o '1m'. El valor por defecto es '10k'.
+
 ## Despliegue
 
 Para asegurar replicabilidad se utilizara Docker, las imagenes usadas para este proyecto son:
@@ -115,3 +125,15 @@ pnpm run dev
 - El .env.example es un archivo de ejemplo para el archivo .env , se debe crear un archivo .env con las credenciales de la base de datos. 
 - Las imagenes de docker son sacadas de [Docker Hub](https://hub.docker.com/): [postgresql:17-alpine](https://hub.docker.com/_/postgres/tags?name=17-alpine) y [lazhearth/wachiman-api:latest](https://hub.docker.com/r/lazhearth/wachiman-api/tags?name=latest)
 - Para la demo de este proyecto se utilizo Amazon Web Services , sin embargo se puede ejecutar localmente con Docker Compose o en cualquier otra plataforma que soporte Docker.
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Lazheart/Comiteca-Guachiman)
+
+
+## Demo del proyecto
+
+Puedes probar una versión de demostración del proyecto en los siguientes enlaces:
+
+- **Frontend:** https://main.d36nbpwdt6zjxp.amplifyapp.com/prestamos
+- **Documentación de la API (Swagger):** https://ws4cn3jry3.execute-api.us-east-1.amazonaws.com/docs
+
+> **Nota:** La demostración estará disponible hasta el **30 de julio de 2026**.

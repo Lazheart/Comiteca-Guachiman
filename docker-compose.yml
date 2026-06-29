@@ -11,6 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./sql:/docker-entrypoint-initdb.d
+      - ./data-ingest:/data-ingest
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -18,15 +19,22 @@ services:
       retries: 5
 
   api-wachi:
-    container_name: api-wachi
-    image: lazhearth/wachiman-api:latest
+    container_name: wachiman-api
+    image: lazheart/api-wachi:latest
+    # build:
+    #   context: ./api
+    #   dockerfile: Dockerfile
     env_file:
       - .env
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
       - "${API_PORT}:8080"
     restart: unless-stopped
