@@ -117,7 +117,9 @@ CREATE TABLE Evento (
     tema VARCHAR(100),
     fecha DATE,
     horaInicio TIME,
-    horaFin TIME
+    horaFin TIME,
+	numeroDePiso INTEGER,
+	idZona VARCHAR
 );
 
 CREATE TABLE Prestamo (
