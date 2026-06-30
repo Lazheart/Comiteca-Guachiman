@@ -1,9 +1,8 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApi } from '@/hooks/useApi';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { eventService } from '@/services/eventService';
-import type { EventFilters } from '@/interfaces';
+import type { Event, EventFilters, PaginationParams } from '@/interfaces';
 import { Loader } from '@/components/Loader';
 import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
@@ -13,42 +12,32 @@ import { Badge } from '@/components/Badge';
 import { CalendarDays, MapPin, Clock, ChevronRight } from 'lucide-react';
 import { formatDate, isPast, relativeDateLabel } from '@/utils/formatDate';
 import { truncate } from '@/utils/formatText';
-import { DEFAULT_PAGE_SIZE } from '@/constants';
 import { apiField } from '@/utils/apiField';
 
 /**
- * Página de eventos con filtros de fecha y vista de próximos eventos.
+ * Página de eventos con paginación server-side y filtros de fecha.
  */
 export function EventsPage() {
   const navigate = useNavigate();
   const [filters, setFilters] = useState<EventFilters>({});
   const [activeTab, setActiveTab] = useState<'all' | 'upcoming'>('upcoming');
 
-  const { data: allEvents, loading: loadingAll, error: errorAll, refetch: refetchAll } = useApi(
-    () => eventService.getAll(filters),
-    [filters],
-  );
-  const { data: upcoming, loading: loadingUpcoming, error: errorUpcoming, refetch: refetchUpcoming } = useApi(
-    () => eventService.getUpcoming(),
-    [],
+  const fetcher = useCallback(
+    (pagination: PaginationParams, signal: AbortSignal) => {
+      if (activeTab === 'upcoming') return eventService.getUpcoming(pagination, signal);
+      return eventService.getAll(filters, pagination, signal);
+    },
+    [activeTab, filters],
   );
 
-  const displayList = activeTab === 'upcoming' ? (upcoming ?? []) : (allEvents ?? []);
-  const loading = activeTab === 'upcoming' ? loadingUpcoming : loadingAll;
-  const error = activeTab === 'upcoming' ? errorUpcoming : errorAll;
-  const refetch = activeTab === 'upcoming' ? refetchUpcoming : refetchAll;
-
-  const { currentPage, totalPages, offset, limit, setPage } = usePagination({
-    totalItems: displayList.length,
-    itemsPerPage: DEFAULT_PAGE_SIZE,
-  });
-  const paginated = displayList.slice(offset, offset + limit);
+  const { items, loading, error, currentPage, totalPages, totalItems, setPage, refetch } =
+    useServerPagination<Event>({ fetcher, initialPageSize: 18, deps: [fetcher] });
 
   return (
     <div className="section-container py-10">
       <SectionTitle
         title="Eventos"
-        subtitle="Actividades culturales y de la comicteca"
+        subtitle={loading ? 'Cargando...' : `${totalItems.toLocaleString()} eventos`}
       />
 
       {/* Tabs */}
@@ -84,7 +73,7 @@ export function EventsPage() {
               type="date"
               className="input text-sm"
               value={filters.date ?? ''}
-              onChange={(e) => setFilters((p) => ({ ...p, date: e.target.value || undefined }))}
+              onChange={(e) => { setFilters((p) => ({ ...p, date: e.target.value || undefined })); setPage(1); }}
             />
           </div>
           <div>
@@ -96,7 +85,7 @@ export function EventsPage() {
               type="date"
               className="input text-sm"
               value={filters.from ?? ''}
-              onChange={(e) => setFilters((p) => ({ ...p, from: e.target.value || undefined }))}
+              onChange={(e) => { setFilters((p) => ({ ...p, from: e.target.value || undefined })); setPage(1); }}
             />
           </div>
           <div>
@@ -108,7 +97,7 @@ export function EventsPage() {
               type="date"
               className="input text-sm"
               value={filters.to ?? ''}
-              onChange={(e) => setFilters((p) => ({ ...p, to: e.target.value || undefined }))}
+              onChange={(e) => { setFilters((p) => ({ ...p, to: e.target.value || undefined })); setPage(1); }}
             />
           </div>
         </div>
@@ -119,7 +108,7 @@ export function EventsPage() {
         <Loader />
       ) : error ? (
         <ErrorMessage message={error} onRetry={refetch} />
-      ) : paginated.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState
           title="Sin eventos"
           description="No hay eventos que mostrar para los filtros seleccionados."
@@ -127,7 +116,7 @@ export function EventsPage() {
       ) : (
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {paginated.map((event) => {
+            {items.map((event) => {
               const past = isPast(event.fecha);
               const piso = apiField<number>(event, 'numeroDePiso', 'numerodepiso');
               const zona = apiField<string>(event, 'idZona', 'idzona');
@@ -142,7 +131,6 @@ export function EventsPage() {
                   onClick={() => navigate(`/eventos/${event.id}`)}
                   id={`event-${event.id}`}
                 >
-                  {/* Fecha header */}
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${past ? 'bg-[#2e2e2e]' : 'bg-[#60a5fa]/10'}`}>
@@ -157,14 +145,12 @@ export function EventsPage() {
                     </Badge>
                   </div>
 
-                  {/* Tema (nombre real del campo en DB) */}
                   <div className="flex-1">
                     <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight group-hover:text-[#e66414] transition-colors mb-1">
                       {truncate(event.tema, 70)}
                     </h3>
                   </div>
 
-                  {/* Metadatos */}
                   <div className="flex flex-col gap-1.5 pt-3 border-t border-[#2e2e2e]">
                     {piso !== null && piso !== undefined && (
                       <p className="text-[#a0a0a0] text-xs flex items-center gap-1.5">

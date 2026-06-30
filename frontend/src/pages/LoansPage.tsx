@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useApi } from '@/hooks/useApi';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { loanService } from '@/services/loanService';
-import type { Loan } from '@/interfaces';
+import type { Loan, PaginationParams } from '@/interfaces';
 import { Loader } from '@/components/Loader';
 import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
@@ -22,89 +21,82 @@ import {
   Copy,
 } from 'lucide-react';
 import { formatDate } from '@/utils/formatDate';
-import { DEFAULT_PAGE_SIZE } from '@/constants';
 import { apiField } from '@/utils/apiField';
+import { useApi } from '@/hooks/useApi';
 
 type LoanTab = 'all' | 'active' | 'expired';
 
 /**
- * Página de préstamos con tabs: todos, activos, vencidos y búsqueda por DNI/material.
- * Usa los campos reales de la tabla Prestamo:
- *   id, miembro_DNI, bibliotecario_DNI, material_id, numeroCopia,
- *   fechaPrestamo, fechaLimite, fechaDevolucion, estado
+ * Página de préstamos con tabs y búsqueda por DNI/material.
+ * Toda la paginación ocurre en el servidor.
  */
 export function LoansPage() {
   const [activeTab, setActiveTab] = useState<LoanTab>('all');
   const [searchDni, setSearchDni] = useState('');
   const [searchMaterialId, setSearchMaterialId] = useState('');
-  const [dniResults, setDniResults] = useState<Loan[] | null>(null);
-  const [materialResults, setMaterialResults] = useState<Loan[] | null>(null);
-  const [searching, setSearching] = useState(false);
+  const [dniMode, setDniMode] = useState(false);
+  const [materialMode, setMaterialMode] = useState(false);
+  const [dniValue, setDniValue] = useState<number | null>(null);
+  const [materialValue, setMaterialValue] = useState<number | null>(null);
 
-  const { data: allLoans, loading: lAll, error: eAll, refetch: rAll } = useApi(() => loanService.getAll(), []);
-  const { data: activeLoans, loading: lActive, error: eActive, refetch: rActive } = useApi(() => loanService.getActive(), []);
-  const { data: expiredLoans, loading: lExpired, error: eExpired, refetch: rExpired } = useApi(() => loanService.getExpired(), []);
+  // Stats: sólo counts — peticiones pequeñas
+  const { data: allStats } = useApi(() => loanService.getAll({ page: 1, page_size: 1 }), []);
+  const { data: activeStats } = useApi(() => loanService.getActive({ page: 1, page_size: 1 }), []);
+  const { data: expiredStats } = useApi(() => loanService.getExpired({ page: 1, page_size: 1 }), []);
 
-  const tabData: Record<LoanTab, { data: Loan[] | null; loading: boolean; error: string | null; refetch: () => void }> = {
-    all: { data: dniResults ?? materialResults ?? allLoans, loading: lAll, error: eAll, refetch: rAll },
-    active: { data: activeLoans, loading: lActive, error: eActive, refetch: rActive },
-    expired: { data: expiredLoans, loading: lExpired, error: eExpired, refetch: rExpired },
-  };
+  const fetcher = useCallback(
+    (pagination: PaginationParams, signal: AbortSignal) => {
+      if (dniMode && dniValue !== null) return loanService.getByMember(dniValue, pagination, signal);
+      if (materialMode && materialValue !== null) return loanService.getByMaterial(materialValue, pagination, signal);
+      if (activeTab === 'active') return loanService.getActive(pagination, signal);
+      if (activeTab === 'expired') return loanService.getExpired(pagination, signal);
+      return loanService.getAll(pagination, signal);
+    },
+    [activeTab, dniMode, dniValue, materialMode, materialValue],
+  );
 
-  const { data, loading, error, refetch } = tabData[activeTab];
-  const displayList = data ?? [];
+  const { items, loading, error, currentPage, totalPages, totalItems, setPage, refetch } =
+    useServerPagination<Loan>({ fetcher, initialPageSize: 20, deps: [fetcher] });
 
-  const { currentPage, totalPages, offset, limit, setPage } = usePagination({
-    totalItems: displayList.length,
-    itemsPerPage: DEFAULT_PAGE_SIZE,
-  });
-  const paginated = displayList.slice(offset, offset + limit);
-
-  const handleSearchDni = useCallback(async (query: string) => {
+  const handleSearchDni = (query: string) => {
     const dni = parseInt(query);
     if (isNaN(dni)) return;
-    setSearching(true);
-    setMaterialResults(null);
-    try {
-      const results = await loanService.getByMember(dni);
-      setDniResults(results);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    setSearchDni(query);
+    setDniValue(dni);
+    setDniMode(true);
+    setMaterialMode(false);
+    setPage(1);
+  };
 
-  const handleSearchMaterial = useCallback(async (query: string) => {
+  const handleSearchMaterial = (query: string) => {
     const id = parseInt(query);
     if (isNaN(id)) return;
-    setSearching(true);
-    setDniResults(null);
-    try {
-      const results = await loanService.getByMaterial(id);
-      setMaterialResults(results);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    setSearchMaterialId(query);
+    setMaterialValue(id);
+    setMaterialMode(true);
+    setDniMode(false);
+    setPage(1);
+  };
 
   const clearSearch = () => {
-    setDniResults(null);
-    setMaterialResults(null);
+    setDniMode(false);
+    setMaterialMode(false);
+    setDniValue(null);
+    setMaterialValue(null);
     setSearchDni('');
     setSearchMaterialId('');
+    setPage(1);
   };
 
   return (
     <div className="section-container py-10">
-      <SectionTitle
-        title="Préstamos"
-        subtitle="Gestión de préstamos de materiales"
-      />
+      <SectionTitle title="Préstamos" subtitle="Gestión de préstamos de materiales" />
 
       {/* Stats rápidas */}
       <div className="grid grid-cols-3 gap-4 mb-8">
-        <StatCard label="Total" value={allLoans?.length ?? '—'} icon={<BookMarked size={20} />} color="primary" />
-        <StatCard label="En Curso" value={activeLoans?.length ?? '—'} icon={<CheckCircle size={20} />} color="success" />
-        <StatCard label="Vencidos" value={expiredLoans?.length ?? '—'} icon={<AlertTriangle size={20} />} color="danger" />
+        <StatCard label="Total" value={allStats?.total_items ?? '—'} icon={<BookMarked size={20} />} color="primary" />
+        <StatCard label="En Curso" value={activeStats?.total_items ?? '—'} icon={<CheckCircle size={20} />} color="success" />
+        <StatCard label="Vencidos" value={expiredStats?.total_items ?? '—'} icon={<AlertTriangle size={20} />} color="danger" />
       </div>
 
       {/* Búsquedas */}
@@ -122,7 +114,7 @@ export function LoansPage() {
             <SearchBar
               placeholder="Ingresa el DNI..."
               defaultValue={searchDni}
-              onSearch={(q) => { setSearchDni(q); handleSearchDni(q); }}
+              onSearch={handleSearchDni}
               onClear={clearSearch}
             />
           </div>
@@ -134,7 +126,7 @@ export function LoansPage() {
             <SearchBar
               placeholder="Ingresa el ID del material..."
               defaultValue={searchMaterialId}
-              onSearch={(q) => { setSearchMaterialId(q); handleSearchMaterial(q); }}
+              onSearch={handleSearchMaterial}
               onClear={clearSearch}
             />
           </div>
@@ -142,7 +134,7 @@ export function LoansPage() {
       </div>
 
       {/* Tabs */}
-      {!dniResults && !materialResults && (
+      {!dniMode && !materialMode && (
         <div className="flex gap-1 p-1 bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl w-fit mb-6">
           {([
             { key: 'all', label: 'Todos' },
@@ -166,14 +158,15 @@ export function LoansPage() {
       )}
 
       {/* Tabla */}
-      {loading || searching ? (
+      {loading ? (
         <Loader />
       ) : error ? (
         <ErrorMessage message={error} onRetry={refetch} />
-      ) : paginated.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState title="Sin préstamos" description="No hay préstamos para mostrar." />
       ) : (
         <>
+          <p className="text-xs text-[#6b6b6b] mb-3">{totalItems.toLocaleString()} préstamos en total</p>
           <div className="card overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -190,7 +183,7 @@ export function LoansPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((loan) => {
+                {items.map((loan) => {
                   const miembroDni = apiField<number>(loan, 'miembro_DNI', 'miembro_dni');
                   const bibliotecarioDni = apiField<number>(loan, 'bibliotecario_DNI', 'bibliotecario_dni');
                   const materialId = apiField<number>(loan, 'material_id');
@@ -201,43 +194,40 @@ export function LoansPage() {
                   const estado = apiField<string>(loan, 'estado');
 
                   return (
-                  <tr key={loan.id} id={`loan-row-${loan.id}`}>
-                    <td className="font-mono text-[#e66414]">#{loan.id}</td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <User size={12} className="text-[#6b6b6b]" />
-                        {miembroDni}
-                      </div>
-                    </td>
-                    <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <BookOpen size={12} className="text-[#6b6b6b]" />
-                        {materialId ?? '—'}
-                      </div>
-                    </td>
-                    <td>
-                      <div className="flex items-center gap-1.5">
-                        <Copy size={12} className="text-[#6b6b6b]" />
-                        #{numeroCopia}
-                      </div>
-                    </td>
-                    <td className="text-[#a0a0a0]">{fechaPrestamo ? formatDate(fechaPrestamo) : '—'}</td>
-                    <td className="text-[#a0a0a0]">
-                      {fechaLimite ? formatDate(fechaLimite) : '—'}
-                    </td>
-                    <td className="text-[#a0a0a0]">
-                      {fechaDevolucion ? formatDate(fechaDevolucion) : (
-                        <span className="text-[#6b6b6b] text-xs italic">Pendiente</span>
-                      )}
-                    </td>
-                    <td>
-                      <LoanStatusBadge
-                        estado={estado}
-                        fechaDevolucion={fechaDevolucion}
-                      />
-                    </td>
-                  </tr>
+                    <tr key={loan.id} id={`loan-row-${loan.id}`}>
+                      <td className="font-mono text-[#e66414]">#{loan.id}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <User size={12} className="text-[#6b6b6b]" />
+                          {miembroDni}
+                        </div>
+                      </td>
+                      <td className="font-mono text-xs">{bibliotecarioDni ?? '—'}</td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <BookOpen size={12} className="text-[#6b6b6b]" />
+                          {materialId ?? '—'}
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex items-center gap-1.5">
+                          <Copy size={12} className="text-[#6b6b6b]" />
+                          #{numeroCopia}
+                        </div>
+                      </td>
+                      <td className="text-[#a0a0a0]">{fechaPrestamo ? formatDate(fechaPrestamo) : '—'}</td>
+                      <td className="text-[#a0a0a0]">
+                        {fechaLimite ? formatDate(fechaLimite) : '—'}
+                      </td>
+                      <td className="text-[#a0a0a0]">
+                        {fechaDevolucion ? formatDate(fechaDevolucion) : (
+                          <span className="text-[#6b6b6b] text-xs italic">Pendiente</span>
+                        )}
+                      </td>
+                      <td>
+                        <LoanStatusBadge estado={estado} fechaDevolucion={fechaDevolucion} />
+                      </td>
+                    </tr>
                   );
                 })}
               </tbody>
@@ -257,14 +247,7 @@ function LoanStatusBadge({
   estado?: string;
   fechaDevolucion?: string | null;
 }) {
-  // Si tiene fechaDevolucion real, está devuelto
-  if (fechaDevolucion) {
-    return <Badge variant="success" dot>Devuelto</Badge>;
-  }
-  // Estado "En Curso" es el valor real en la DB
-  if (estado === 'En Curso') {
-    return <Badge variant="info" dot>En Curso</Badge>;
-  }
-  // Sin estado ni devolución → vencido
+  if (fechaDevolucion) return <Badge variant="success" dot>Devuelto</Badge>;
+  if (estado === 'En Curso') return <Badge variant="info" dot>En Curso</Badge>;
   return <Badge variant="danger" dot>Vencido</Badge>;
 }

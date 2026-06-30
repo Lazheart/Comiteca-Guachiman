@@ -1,45 +1,29 @@
-import type { Loan } from '@/interfaces';
+import type { Loan, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Préstamos */
 export const loanService = {
-  /**
-   * Obtiene todos los préstamos.
-   */
-  async getAll(): Promise<Loan[]> {
-    const { data } = await api.get<Loan[]>('/loans');
+  async getAll(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Loan>> {
+    const { data } = await api.get<PaginatedResponse<Loan>>('/loans', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene los préstamos activos.
-   */
-  async getActive(): Promise<Loan[]> {
-    const { data } = await api.get<Loan[]>('/loans/active');
+  async getActive(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Loan>> {
+    const { data } = await api.get<PaginatedResponse<Loan>>('/loans/active', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene los préstamos vencidos.
-   */
-  async getExpired(): Promise<Loan[]> {
-    const { data } = await api.get<Loan[]>('/loans/expired');
+  async getExpired(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Loan>> {
+    const { data } = await api.get<PaginatedResponse<Loan>>('/loans/expired', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene los préstamos de un miembro por DNI.
-   */
-  async getByMember(dni: number): Promise<Loan[]> {
-    const { data } = await api.get<Loan[]>(`/loans/member/${dni}`);
+  async getByMember(dni: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Loan>> {
+    const { data } = await api.get<PaginatedResponse<Loan>>(`/loans/member/${dni}`, { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene los préstamos de un material específico.
-   */
-  async getByMaterial(materialId: number): Promise<Loan[]> {
-    const { data } = await api.get<Loan[]>(`/loans/material/${materialId}`);
+  async getByMaterial(materialId: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Loan>> {
+    const { data } = await api.get<PaginatedResponse<Loan>>(`/loans/material/${materialId}`, { params: pagination, signal });
     return data;
   },
 };

@@ -1,17 +1,14 @@
-import type { DonationAudit, DonationStatisticsRow } from '@/interfaces';
+import type { DonationRecord, DonationStatisticsRow, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Donaciones */
 export const donationService = {
-  /** GET /donations — vista vista_auditoria_donaciones */
-  async getAll(): Promise<DonationAudit[]> {
-    const { data } = await api.get<DonationAudit[]>('/donations');
+  async getAll(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<DonationRecord>> {
+    const { data } = await api.get<PaginatedResponse<DonationRecord>>('/donations', { params: pagination, signal });
     return data;
   },
 
-  /** GET /donations/statistics — agregado por institución donante */
-  async getStatistics(): Promise<DonationStatisticsRow[]> {
-    const { data } = await api.get<DonationStatisticsRow[]>('/donations/statistics');
+  async getStatistics(signal?: AbortSignal): Promise<DonationStatisticsRow[]> {
+    const { data } = await api.get<DonationStatisticsRow[]>('/donations/statistics', { signal });
     return data;
   },
 };

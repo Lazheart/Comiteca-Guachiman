@@ -1,43 +1,23 @@
-import type { Material, Copy, MaterialFilters } from '@/interfaces';
+import type { Material, Copy, MaterialFilters, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Materiales */
 export const materialService = {
-  /**
-   * Obtiene todos los materiales con filtros opcionales.
-   */
-  async getAll(filters?: MaterialFilters): Promise<Material[]> {
-    const params: Record<string, string | boolean> = {};
+  async getAll(filters?: MaterialFilters, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Material>> {
+    const params: Record<string, any> = { ...pagination };
     if (filters?.genre) params['genre'] = filters.genre;
     if (filters?.author) params['author'] = filters.author;
     if (filters?.country) params['country'] = filters.country;
-    const { data } = await api.get<Material[]>('/materials', { params });
+    const { data } = await api.get<PaginatedResponse<Material>>('/materials', { params, signal });
     return data;
   },
 
-  /**
-   * Busca materiales por texto libre.
-   */
-  async search(query: string): Promise<Material[]> {
-    const { data } = await api.get<Material[]>('/materials/search', {
-      params: { q: query },
-    });
+  async getById(id: number, signal?: AbortSignal): Promise<Material> {
+    const { data } = await api.get<Material>(`/materials/${id}`, { signal });
     return data;
   },
 
-  /**
-   * Obtiene un material por su ID.
-   */
-  async getById(id: number): Promise<Material> {
-    const { data } = await api.get<Material>(`/materials/${id}`);
-    return data;
-  },
-
-  /**
-   * Obtiene las copias de un material específico.
-   */
-  async getCopies(materialId: number): Promise<Copy[]> {
-    const { data } = await api.get<Copy[]>(`/materials/${materialId}/copies`);
+  async getCopies(materialId: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Copy>> {
+    const { data } = await api.get<PaginatedResponse<Copy>>(`/materials/${materialId}/copies`, { params: pagination, signal });
     return data;
   },
 };

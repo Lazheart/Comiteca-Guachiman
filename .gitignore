@@ -4,4 +4,5 @@ generated/
 .env
 venv/
 __pycache__
+rework.md
 

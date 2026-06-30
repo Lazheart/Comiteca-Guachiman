@@ -1,29 +1,19 @@
-import type { Copy } from '@/interfaces';
+import type { Copy, PaginatedResponse, PaginationParams } from '@/interfaces';
 import api from './api';
 
-/** Servicio para consumir los endpoints de Copias */
 export const copyService = {
-  /**
-   * Obtiene todas las copias.
-   */
-  async getAll(): Promise<Copy[]> {
-    const { data } = await api.get<Copy[]>('/copies');
+  async getAll(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Copy>> {
+    const { data } = await api.get<PaginatedResponse<Copy>>('/copies', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene solo las copias disponibles.
-   */
-  async getAvailable(): Promise<Copy[]> {
-    const { data } = await api.get<Copy[]>('/copies/available');
+  async getAvailable(pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Copy>> {
+    const { data } = await api.get<PaginatedResponse<Copy>>('/copies/available', { params: pagination, signal });
     return data;
   },
 
-  /**
-   * Obtiene copias de un material específico.
-   */
-  async getByMaterial(materialId: number): Promise<Copy[]> {
-    const { data } = await api.get<Copy[]>(`/copies/${materialId}`);
+  async getByMaterialId(materialId: number, pagination?: PaginationParams, signal?: AbortSignal): Promise<PaginatedResponse<Copy>> {
+    const { data } = await api.get<PaginatedResponse<Copy>>(`/copies/${materialId}`, { params: pagination, signal });
     return data;
   },
 };

@@ -22,30 +22,35 @@ import {
 } from 'lucide-react';
 
 /**
- * Página de inicio con hero, búsqueda, materiales recientes,
- * próximos eventos, instituciones y estadísticas rápidas.
+ * Página de inicio — todas las peticiones usan page_size pequeño,
+ * nunca se descarga la tabla completa.
  */
 export function HomePage() {
   const navigate = useNavigate();
 
-  const { data: materials, loading: loadingMaterials } = useApi(
-    () => materialService.getAll(),
+  // Solo los primeros 6 materiales para el preview
+  const { data: materialsResp, loading: loadingMaterials } = useApi(
+    () => materialService.getAll({}, { page: 1, page_size: 6 }),
     [],
   );
-  const { data: upcomingEvents, loading: loadingEvents } = useApi(
-    () => eventService.getUpcoming(),
+  // Solo los primeros 3 próximos eventos
+  const { data: eventsResp, loading: loadingEvents } = useApi(
+    () => eventService.getUpcoming({ page: 1, page_size: 3 }),
     [],
   );
-  const { data: institutions, loading: loadingInstitutions } = useApi(
-    () => institutionService.getAll(),
+  // Solo las primeras 4 instituciones
+  const { data: institutionsResp, loading: loadingInstitutions } = useApi(
+    () => institutionService.getAll({ page: 1, page_size: 4 }),
     [],
   );
-  const { data: mostLoaned } = useApi(
-    () => statisticsService.getMostLoanedMaterials(),
+  // Top 5 más prestados
+  const { data: mostLoanedResp } = useApi(
+    () => statisticsService.getMostLoanedMaterials({ page: 1, page_size: 5 }),
     [],
   );
-  const { data: availability } = useApi(
-    () => statisticsService.getMaterialAvailability(),
+  // Disponibilidad: solo agregado
+  const { data: availabilityResp } = useApi(
+    () => statisticsService.getMaterialAvailability({ page: 1, page_size: 50 }),
     [],
   );
 
@@ -55,9 +60,18 @@ export function HomePage() {
     }
   };
 
-  const recentMaterials = materials?.slice(0, 6) ?? [];
-  const previewEvents = upcomingEvents?.slice(0, 3) ?? [];
-  const previewInstitutions = institutions?.slice(0, 4) ?? [];
+  const recentMaterials = materialsResp?.items ?? [];
+  const previewEvents = eventsResp?.items ?? [];
+  const previewInstitutions = institutionsResp?.items ?? [];
+  const mostLoaned = mostLoanedResp?.items ?? [];
+
+  // Stats derivadas de total_items (count exacto desde el servidor)
+  const totalMaterials = materialsResp?.total_items ?? '—';
+  const totalEvents = eventsResp?.total_items ?? '—';
+  const totalInstitutions = institutionsResp?.total_items ?? '—';
+  const disponibles = availabilityResp?.items
+    ?.filter((r) => r.disponibilidad === 'Disponible')
+    .reduce((s, r) => s + Number(r.cantidad), 0) ?? '—';
 
   return (
     <div>
@@ -76,7 +90,7 @@ export function HomePage() {
               Biblioteca Digital Guachimán
             </h1>
             <p className="text-[#a0a0a0] text-lg leading-relaxed mb-10 max-w-lg">
-              Explora materiales, consulta préstamos, revisa eventos y conoce las instituciones que hacen posible la cultura del cómic,manga y novelas.
+              Explora materiales, consulta préstamos, revisa eventos y conoce las instituciones que hacen posible la cultura del cómic, manga y novelas.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
               <SearchBar
@@ -103,30 +117,25 @@ export function HomePage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard
             label="Total materiales"
-            value={materials?.length ?? '—'}
+            value={totalMaterials}
             icon={<BookOpen size={22} />}
             color="primary"
           />
           <StatCard
             label="Disponibles"
-            value={
-              typeof availability?.disponibles === 'number'
-                ? availability.disponibles
-                /* fallback: materiales con al menos 1 copia disponible */
-                : (materials?.filter((m) => (m.copias_disponibles ?? 0) > 0).length ?? '—')
-            }
+            value={disponibles}
             icon={<CheckCircle size={22} />}
             color="success"
           />
           <StatCard
             label="Próximos eventos"
-            value={upcomingEvents?.length ?? '—'}
+            value={totalEvents}
             icon={<CalendarDays size={22} />}
             color="info"
           />
           <StatCard
             label="Instituciones"
-            value={institutions?.length ?? '—'}
+            value={totalInstitutions}
             icon={<Building2 size={22} />}
             color="warning"
           />
@@ -174,7 +183,6 @@ export function HomePage() {
                       {material.genero && (
                         <span className="badge badge-primary">{material.genero}</span>
                       )}
-                      {/* disponibilidad real viene de Ejemplar.disponibilidad (derivado) */}
                       {(material.copias_disponibles ?? 0) > 0 && (
                         <span className="badge badge-success" aria-label="Disponible">
                           <span className="w-1.5 h-1.5 rounded-full bg-green-400" />
@@ -229,7 +237,6 @@ export function HomePage() {
                       {formatDate(event.fecha)}
                     </span>
                   </div>
-                  {/* "tema" es el campo real en la tabla Evento (no "nombre") */}
                   <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight mb-1 group-hover:text-[#e66414] transition-colors">
                     {truncate(event.tema, 60)}
                   </h3>
@@ -272,7 +279,7 @@ export function HomePage() {
           <Loader />
         ) : (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {previewInstitutions.map((inst) => (
+            {previewInstitutions.map((inst) => (
               <article
                 key={inst.id ?? `inst-${inst.nombre}-${inst.tipoInstitucion || ''}`}
                 className="card p-5 cursor-pointer group text-center"
@@ -285,7 +292,6 @@ export function HomePage() {
                 <h3 className="font-semibold text-[#f5f5f5] text-sm leading-tight group-hover:text-[#e66414] transition-colors">
                   {truncate(inst.nombre, 30)}
                 </h3>
-                {/* tipoInstitucion es el campo real (no "tipo") */}
                 {inst.tipoInstitucion && (
                   <p className="text-[#6b6b6b] text-xs mt-1">{inst.tipoInstitucion}</p>
                 )}
@@ -296,7 +302,7 @@ export function HomePage() {
       </section>
 
       {/* MATERIALES MÁS PRESTADOS */}
-      {mostLoaned && mostLoaned.length > 0 && (
+      {mostLoaned.length > 0 && (
         <section className="bg-[#0a0a0a] py-16">
           <div className="section-container">
             <SectionTitle
@@ -314,7 +320,7 @@ export function HomePage() {
               }
             />
             <div className="flex flex-col gap-3">
-              {mostLoaned.slice(0, 5).map((item, idx) => (
+              {mostLoaned.map((item, idx) => (
                 <div
                   key={`mostloaned-${item.titulo}-${idx}`}
                   className="flex items-center gap-4 p-4 card"

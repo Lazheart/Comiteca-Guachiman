@@ -127,3 +127,13 @@ pnpm run dev
 - Para la demo de este proyecto se utilizo Amazon Web Services , sin embargo se puede ejecutar localmente con Docker Compose o en cualquier otra plataforma que soporte Docker.
 
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/Lazheart/Comiteca-Guachiman)
+
+
+## Demo del proyecto
+
+Puedes probar una versión de demostración del proyecto en los siguientes enlaces:
+
+- **Frontend:** https://main.d36nbpwdt6zjxp.amplifyapp.com/prestamos
+- **Documentación de la API (Swagger):** https://ws4cn3jry3.execute-api.us-east-1.amazonaws.com/docs
+
+> **Nota:** La demostración estará disponible hasta el **30 de julio de 2026**.

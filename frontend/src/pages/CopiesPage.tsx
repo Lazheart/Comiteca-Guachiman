@@ -1,8 +1,7 @@
 import { useState, useCallback } from 'react';
-import { useApi } from '@/hooks/useApi';
-import { usePagination } from '@/hooks/usePagination';
+import { useServerPagination } from '@/hooks/useServerPagination';
 import { copyService } from '@/services/copyService';
-import type { Copy } from '@/interfaces';
+import type { Copy, PaginationParams } from '@/interfaces';
 import { Loader } from '@/components/Loader';
 import { ErrorMessage } from '@/components/ErrorMessage';
 import { EmptyState } from '@/components/EmptyState';
@@ -18,53 +17,50 @@ import {
   Search,
   XCircle,
 } from 'lucide-react';
-import { DEFAULT_PAGE_SIZE } from '@/constants';
 import { apiField } from '@/utils/apiField';
+import { useApi } from '@/hooks/useApi';
 
 type CopyTab = 'all' | 'available';
 
 /**
- * Página de copias (tabla Ejemplar):
- *   material_id, numeroCopia, estadoConservacion, disponibilidad
+ * Página de copias (tabla Ejemplar) con paginación server-side.
  */
 export function CopiesPage() {
   const [activeTab, setActiveTab] = useState<CopyTab>('all');
+  const [materialMode, setMaterialMode] = useState(false);
+  const [materialValue, setMaterialValue] = useState<number | null>(null);
   const [searchMaterialId, setSearchMaterialId] = useState('');
-  const [materialResults, setMaterialResults] = useState<Copy[] | null>(null);
-  const [searching, setSearching] = useState(false);
 
-  const { data: allCopies, loading: lAll, error: eAll, refetch: rAll } = useApi(() => copyService.getAll(), []);
-  const { data: availableCopies, loading: lAvailable, error: eAvailable, refetch: rAvailable } = useApi(() => copyService.getAvailable(), []);
+  // Stats counts
+  const { data: allStats } = useApi(() => copyService.getAll({ page: 1, page_size: 1 }), []);
+  const { data: availableStats } = useApi(() => copyService.getAvailable({ page: 1, page_size: 1 }), []);
 
-  const tabData: Record<CopyTab, { data: Copy[] | null; loading: boolean; error: string | null; refetch: () => void }> = {
-    all: { data: materialResults ?? allCopies, loading: lAll, error: eAll, refetch: rAll },
-    available: { data: availableCopies, loading: lAvailable, error: eAvailable, refetch: rAvailable },
-  };
+  const fetcher = useCallback(
+    (pagination: PaginationParams, signal: AbortSignal) => {
+      if (materialMode && materialValue !== null) return copyService.getByMaterialId(materialValue, pagination, signal);
+      if (activeTab === 'available') return copyService.getAvailable(pagination, signal);
+      return copyService.getAll(pagination, signal);
+    },
+    [activeTab, materialMode, materialValue],
+  );
 
-  const { data, loading, error, refetch } = tabData[activeTab];
-  const displayList = data ?? [];
+  const { items, loading, error, currentPage, totalPages, totalItems, setPage, refetch } =
+    useServerPagination<Copy>({ fetcher, initialPageSize: 20, deps: [fetcher] });
 
-  const { currentPage, totalPages, offset, limit, setPage } = usePagination({
-    totalItems: displayList.length,
-    itemsPerPage: DEFAULT_PAGE_SIZE,
-  });
-  const paginated = displayList.slice(offset, offset + limit);
-
-  const handleSearchMaterial = useCallback(async (query: string) => {
+  const handleSearchMaterial = (query: string) => {
     const id = parseInt(query);
     if (isNaN(id)) return;
-    setSearching(true);
-    try {
-      const results = await copyService.getByMaterial(id);
-      setMaterialResults(results);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+    setSearchMaterialId(query);
+    setMaterialValue(id);
+    setMaterialMode(true);
+    setPage(1);
+  };
 
   const clearSearch = () => {
-    setMaterialResults(null);
+    setMaterialMode(false);
+    setMaterialValue(null);
     setSearchMaterialId('');
+    setPage(1);
   };
 
   return (
@@ -75,8 +71,8 @@ export function CopiesPage() {
       />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard label="Total Copias" value={allCopies?.length ?? '—'} icon={<Layers size={20} />} color="primary" />
-        <StatCard label="Disponibles" value={availableCopies?.length ?? '—'} icon={<CheckCircle size={20} />} color="success" />
+        <StatCard label="Total Copias" value={allStats?.total_items ?? '—'} icon={<Layers size={20} />} color="primary" />
+        <StatCard label="Disponibles" value={availableStats?.total_items ?? '—'} icon={<CheckCircle size={20} />} color="success" />
       </div>
 
       <div className="card p-5 mb-6">
@@ -93,14 +89,14 @@ export function CopiesPage() {
             <SearchBar
               placeholder="Ingresa el ID del material..."
               defaultValue={searchMaterialId}
-              onSearch={(q) => { setSearchMaterialId(q); handleSearchMaterial(q); }}
+              onSearch={handleSearchMaterial}
               onClear={clearSearch}
             />
           </div>
         </div>
       </div>
 
-      {!materialResults && (
+      {!materialMode && (
         <div className="flex gap-1 p-1 bg-[#1a1a1a] border border-[#2e2e2e] rounded-xl w-fit mb-6">
           {([
             { key: 'all', label: 'Todas' },
@@ -122,14 +118,15 @@ export function CopiesPage() {
         </div>
       )}
 
-      {loading || searching ? (
+      {loading ? (
         <Loader />
       ) : error ? (
         <ErrorMessage message={error} onRetry={refetch} />
-      ) : paginated.length === 0 ? (
+      ) : items.length === 0 ? (
         <EmptyState title="Sin copias" description="No se encontraron copias registradas." />
       ) : (
         <>
+          <p className="text-xs text-[#6b6b6b] mb-3">{totalItems.toLocaleString()} copias en total</p>
           <div className="card overflow-x-auto">
             <table className="data-table">
               <thead>
@@ -141,7 +138,7 @@ export function CopiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {paginated.map((copy) => {
+                {items.map((copy) => {
                   const materialId = apiField<number>(copy, 'material_id') ?? 0;
                   const numeroCopia = apiField<number>(copy, 'numeroCopia', 'numerocopia') ?? 0;
                   const estado = apiField<string>(copy, 'estadoConservacion', 'estadoconservacion');

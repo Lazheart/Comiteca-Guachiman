@@ -33,14 +33,16 @@ export function InstitutionDetailPage() {
     () => institutionService.getById(institutionId),
     [institutionId],
   );
-  const { data: donations, loading: loadingDonations } = useApi(
-    () => institutionService.getDonations(institutionId),
+  const { data: donationsResp, loading: loadingDonations } = useApi(
+    () => institutionService.getDonations(institutionId, { page: 1, page_size: 100 }),
     [institutionId],
   );
-  const { data: events, loading: loadingEvents } = useApi(
-    () => institutionService.getSponsoredEvents(institutionId),
+  const { data: eventsResp, loading: loadingEvents } = useApi(
+    () => institutionService.getSponsoredEvents(institutionId, { page: 1, page_size: 100 }),
     [institutionId],
   );
+  const donations = donationsResp?.items ?? null;
+  const events = eventsResp?.items ?? null;
 
   if (loading) return <Loader />;
   if (error || !institution)
@@ -117,7 +119,7 @@ export function InstitutionDetailPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
-          <SectionTitle title="Donaciones" subtitle={`${donations?.length ?? 0} registradas`} />
+          <SectionTitle title="Donaciones" subtitle={`${donationsResp?.total_items ?? 0} registradas`} />
           {loadingDonations ? (
             <Loader />
           ) : !donations || donations.length === 0 ? (
@@ -160,7 +162,7 @@ export function InstitutionDetailPage() {
         </div>
 
         <div>
-          <SectionTitle title="Eventos patrocinados" subtitle={`${events?.length ?? 0} eventos`} />
+          <SectionTitle title="Eventos patrocinados" subtitle={`${eventsResp?.total_items ?? 0} eventos`} />
           {loadingEvents ? (
             <Loader />
           ) : !events || events.length === 0 ? (
